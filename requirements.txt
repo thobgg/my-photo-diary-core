@@ -1,0 +1,11 @@
+fastapi==0.109.0
+uvicorn==0.27.0
+requests==2.31.0
+urllib3==2.1.0
+Pillow==10.2.0
+pillow-heif==0.22.0
+piexif==1.1.3
+blurhash==1.1.4
+numpy==1.26.4
+APScheduler==3.10.4
+argon2-cffi==23.1.0

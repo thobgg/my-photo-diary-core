@@ -1,0 +1,32 @@
+# My Photo Diary — example configuration for Docker Compose
+#
+#   mkdir -p photos homes data
+#   printf 'MPD_PHOTO_SHARED=/photos\nMPD_HOMES_ROOT=/homes\n' > mpd.env
+#   docker compose up -d --build
+#   → http://<host>:8089
+#
+# Four places, kept apart on purpose:
+#   ./photos   the family collection. An album is a folder with an
+#              album.json inside. MPD writes album.json and small caches there.
+#   ./homes    personal spaces, one folder per account: homes/<name>/Photos
+#   ./data     MPD's own data: accounts, sessions, thumbnails.
+#              users.json is irreplaceable, everything else rebuilds itself.
+#   ./mpd.env  settings, read once at start (all options: mpd.env.example)
+
+services:
+  mpd:
+    container_name: my-photo-diary
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./mpd.env:/app/mpd.env:ro
+      - ${MPD_PHOTOS:-./photos}:/photos
+      - ${MPD_HOMES:-./homes}:/homes
+      - ${MPD_DATA:-./data}:/data
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      # Behind a reverse proxy: put the proxy's address here so the login
+      # lockout sees the real client IP. Never "*".
+      # - FORWARDED_ALLOW_IPS=172.17.0.1

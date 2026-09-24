@@ -1,0 +1,515 @@
+/* MPD Edit-Mode — Core
+ * Globale Edit-Zustände: Banner, Toggle, Grid-Mode, Sortable, Drop-Indicator,
+ * Undo/Redo-Buttons, Banner-Save, Header-Controls, is-locked-Markierung.
+ */
+
+/* ── Header Edit-Toggle ── */
+.edit-toggle { transition: all 0.3s ease; }
+
+.edit-toggle.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.edit-toggle.active:hover:not(:disabled) { background-color: #45a049; }
+
+.edit-toggle:disabled,
+.edit-toggle.active:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Edit-Mode Banner ── */
+.edit-mode-banner {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 1;
+    animation: slideDown 0.3s ease;
+}
+
+.edit-mode-banner.hidden { display: none; }
+
+.edit-mode-banner-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.edit-mode-icon { font-size: 1.3em; }
+.edit-mode-text { font-weight: 600; font-size: 1.05em; }
+
+.edit-mode-hint {
+    opacity: 0.9;
+    font-size: 0.9em;
+    padding-left: 12px;
+    border-left: 2px solid rgba(255,255,255,0.3);
+    transition: color 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* ============================================
+   Drag & Drop (Platzhalter — SortableJS regelt den Rest)
+   ============================================ */
+
+.drag-handle { display: none; }
+
+
+@media (max-width: 768px) {
+    .edit-mode-hint           { display: none; }
+    .edit-mode-banner-content { gap: 8px; }
+}
+
+@media (min-width: 1600px) {
+    .edit-mode-banner { font-size: 1.1em; }
+    .drag-handle      { width: 36px; height: 36px; }
+}
+
+
+/* ============================================
+   Edit-Grid-Mode: Layout identisch zum View-Modus,
+   aber #content ist flex-wrap damit einzelne Foto-
+   Elemente nebeneinander fließen (Reihen-Aufbrechen möglich).
+   ============================================ */
+
+#content.edit-grid-mode {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;  /* luftiger als View (4px) — signalisiert
+                  "in Bearbeitung, lose Anordnung" */
+    justify-content: center;
+    align-content: flex-start;
+    align-items: flex-start;
+}
+
+/* Textblöcke: volle Zeile erzwingen */
+#content.edit-grid-mode .text-block {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    cursor: grab;
+    box-sizing: border-box;
+}
+
+/* Im Edit-Modus: photo-grid kein auto-margin */
+#content.edit-grid-mode .photo-grid { margin: 0; }
+
+/* Flex-Break: unsichtbarer Zeilenumbruch (Fallback) */
+#content.edit-grid-mode .flex-break {
+    flex: 0 0 100%;
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+/* Bevor der User in den Edit-Mode wechselt (.editing fehlt), darf die
+   OS-Text-Selektion (Long-Press → Lupe + Selection-Toolbar mit Copy/Cut/
+   Paste) NICHT greifen — sonst frisst Android die Geste mid-Drag und
+   poppt die System-Toolbar über die SortableJS-Lift. Sobald .editing
+   aktiv ist (Tap-Arbitration in album-edit.js hat contentEditable=true
+   gesetzt + focus gefeuert), wird die Selektion freigegeben, damit
+   Cursor + Range-Auswahl im Edit-Mode klappen.
+   Bewusst KEIN @media-Wrapper — manche Android-WebViews liefern die
+   Touch-Media-Query als false und würden den Schutz verlieren. Auf
+   Desktop ist das unschädlich, weil dort eh erst per Click in den
+   Editing-Modus gewechselt wird. */
+.edit-mode-active .text-block.editable:not(.editing) .text-inner {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+#content.edit-grid-mode .photo-grid.draggable-element {
+    cursor: grab;
+    border-radius: 10px;  /* war 3px — freundlicher, "Karten"-Anmutung
+                             im Edit, kommt Google-Fotos-Grid nahe */
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    touch-action: pan-y;
+}
+
+/* Verhindert blaue Browser-Selection-Highlights beim Drag-Versuch */
+#content.edit-grid-mode .photo-grid,
+#content.edit-grid-mode .photo-item,
+#content.edit-grid-mode .photo-item img {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+}
+
+#content.edit-grid-mode .photo-grid.draggable-element .photo-item {
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none;
+    cursor: grab;
+}
+
+#content.edit-grid-mode .photo-grid.draggable-element img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+}
+
+/* Im Edit-Modus: × immer sichtbar (nicht nur bei Hover) */
+/* Dezenter Hinweis unter dem Albumtitel: Dateien im Ordner, die in
+   keinem Element stehen (album.js, albumUnassignedHint). Nur sichtbar,
+   wenn es welche gibt und das Konto kuratieren darf. */
+.album-unassigned-hint {
+    display: inline-block;
+    margin-left: .6rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--muted, #888);
+    font: inherit;
+    font-size: .8rem;
+    text-decoration: underline dotted;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    opacity: .85;
+}
+.album-unassigned-hint:hover { color: var(--text, #ddd); opacity: 1; }
+
+.remove-photo-btn  { cursor: pointer; pointer-events: auto; }
+.delete-text-btn   { cursor: pointer; pointer-events: auto; }
+.delete-file-btn   { cursor: pointer; pointer-events: auto; }
+.locked-toggle-btn { cursor: pointer; pointer-events: auto; }
+/* SVG-Lock im Element-Toggle: ~60% des Buttons, gleiche Formensprache wie
+   #locked-toggle im Header (line-art outline ↔ filled state). */
+.locked-toggle-btn svg { width: 60%; height: 60%; display: block; }
+
+/* Positionen: siehe Kommentar in edit-photo.css (Schloss links oben,
+   × rechts oben, Muelleimer rechts unten). */
+.edit-mode-active .remove-photo-btn {
+    opacity: 1 !important;
+    top: 6px !important;
+    right: 6px !important;
+    left: auto !important;
+}
+
+.edit-mode-active .delete-file-btn {
+    opacity: 1 !important;
+    bottom: 6px !important;
+    right: 6px !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+.edit-mode-active .delete-text-btn {
+    opacity: 1 !important;
+    top: 6px !important;
+    left: 6px !important;
+    right: auto !important;
+}
+
+/* SortableJS States – Google Photos Style (sort: false) */
+#content.edit-grid-mode .sortable-ghost {
+    opacity: 0.25 !important;
+    outline: 2px dashed var(--blue) !important;
+    outline-offset: -2px;
+    border-radius: 4px;
+}
+
+#content.edit-grid-mode .sortable-chosen { cursor: grabbing !important; }
+
+#content.edit-grid-mode .sortable-drag {
+    opacity: 0.85 !important;
+    transform: scale(0.45) !important;
+    transform-origin: top left !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+    z-index: 200;
+    cursor: grabbing !important;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* Text-Block: nicht schrumpfen (sonst unlesbar), stattdessen mit
+   solidem Blau-Rahmen markieren — passt zum dashed-blau des Origin-Ghosts. */
+#content.edit-grid-mode .text-block.sortable-drag {
+    transform: none !important;
+    outline: 2px solid var(--blue) !important;
+    outline-offset: 2px;
+    background: var(--blue-pale);
+}
+
+/* Origin-Position eines gerade gepackten Text-Blocks ebenfalls blau markieren,
+   damit klar ist welches Element gerade reist. */
+#content.edit-grid-mode .text-block.sortable-chosen {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+}
+
+/* Drop-Indikator (absolut positioniert, null Reflow) */
+.drop-indicator {
+    display: none;
+    position: absolute;
+    background: var(--blue, #2E75B6);
+    z-index: 1000;
+    pointer-events: none;
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--blue-pale, rgba(46,117,182,0.4));
+}
+
+.drop-indicator-v { width: 4px; }
+.drop-indicator-h { height: 4px; }
+
+
+/* ============================================
+   is-locked: dezente Markierung wenn show_locked: true
+   ============================================ */
+
+.text-block.is-locked {
+    border-left: 3px solid rgba(200, 50, 50, 0.45);
+    padding-left: 0.8rem;
+    position: relative;
+    opacity: 0.75;
+}
+
+.text-block.is-locked::before {
+    /* Inline SVG-Padlock — gleiche Formensprache wie #locked-toggle und
+       die Element-Toggle-Buttons. Stroke ist rot, passend zum is-locked
+       Border-Left an text-blocks. */
+    content: '';
+    position: absolute;
+    top: -0.45rem;
+    left: -0.15rem;
+    width: 11px;
+    height: 11px;
+    opacity: 0.55;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c83232' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.edit-mode-active .text-block.is-locked {
+    border-left-color: rgba(200, 50, 50, 0.85);
+    opacity: 0.85;
+}
+
+
+/* ============================================
+   is-locked: Medien-Elemente (Foto/Video/Dokument/Audio)
+   Dezentes Schloss-Badge oben rechts, leichte Deckkraft-Reduktion.
+   Im Edit-Modus übernimmt stattdessen der Locked-Toggle-Button.
+   ============================================ */
+
+.photo-item.is-locked > img,
+.document-element.is-locked .document-image,
+.document-element.is-locked .document-pdf-card,
+.link-element.is-locked .link-chip,
+.audio-element.is-locked > .audio-player {
+    opacity: 0.7;
+}
+
+.photo-item.is-locked::after,
+.document-element.is-locked::after,
+.link-element.is-locked::after,
+.audio-element.is-locked::after {
+    /* Inline SVG-Padlock im halbtransparenten Pill — gleiche Formensprache
+       wie #locked-toggle. Stroke ist weiß, der Pill-Hintergrund liefert
+       den Kontrast über jedem Foto/Wrapper. */
+    content: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='11' width='18' height='11' rx='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>");
+    position: absolute;
+    top: 6px;
+    left: 6px;                /* Ecke gegenüber dem Toggle-Button (top-right) */
+    padding: 4px 6px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 10px;
+    line-height: 0;
+    z-index: 15;
+    pointer-events: none;
+}
+
+/* Im Edit-Mode sitzen an top-left die destruktiven Controls (× und 🗑),
+   und der Schloss-Toggle liegt top-right. Das Badge würde kollidieren —
+   deshalb im Edit-Modus ausgeblendet, dafür markiert die Outline den Zustand. */
+.edit-mode-active .photo-item.is-locked::after,
+.edit-mode-active .document-element.is-locked::after,
+.edit-mode-active .audio-element.is-locked::after {
+    display: none;
+}
+
+/* Edit-Mode: deutliche Outline auf gesperrten Medien, damit auf einen
+   Blick erkennbar ist, was privat markiert ist — analog zum orangefarbenen
+   Rand am is-locked-Text-Block. */
+.edit-mode-active .photo-item.is-locked,
+.edit-mode-active .document-element.is-locked,
+.edit-mode-active .audio-element.is-locked,
+.edit-mode-active .separator-element.is-locked,
+.edit-mode-active .map-element.is-locked,
+.edit-mode-active .tour-element.is-locked {
+    outline: 2px dashed rgba(200, 50, 50, 0.85);
+    outline-offset: -2px;
+}
+
+/* is-locked Dim für Separator (Label+Linien) und Map/Tour (Leaflet) */
+.separator-element.is-locked > .separator-line,
+.separator-element.is-locked > .separator-label,
+.separator-element.is-locked > .separator-label-edit {
+    opacity: 0.5;
+}
+.map-element.is-locked > .map-element-leaflet,
+.tour-element.is-locked .tour-map {
+    opacity: 0.7;
+}
+
+/* Locked-Toggle auf Map/Tour: top-right mit hohem z-index,
+   damit er über Leaflet-Kontrollen schwebt. */
+.map-element > .locked-toggle-btn,
+.tour-element .locked-toggle-btn {
+    top: 8px;
+    right: 8px;
+    left: auto;
+    width: 28px;
+    height: 28px;
+    z-index: 1001;
+    opacity: 0;
+}
+.edit-mode-active .map-element > .locked-toggle-btn,
+.edit-mode-active .tour-element .locked-toggle-btn {
+    opacity: 0.9;
+}
+
+/* Locked-Toggle auf Separator: mitte-rechts, links neben dem delete-× */
+.separator-element > .locked-toggle-btn {
+    top: 50%;
+    right: 36px;
+    left: auto;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    opacity: 0;
+}
+.separator-element:hover > .locked-toggle-btn { opacity: 1; }
+@media (hover: none) {
+    .edit-mode-active .separator-element > .locked-toggle-btn { opacity: 0.85; }
+}
+
+/* Locked-Toggle-Button auf Medien-Wrappern: oben rechts statt links
+   (text-block-Basis aus edit-text.css setzt top:8px, left:48px). */
+.photo-item > .locked-toggle-btn,
+.document-element > .locked-toggle-btn,
+.audio-element > .locked-toggle-btn {
+    top: 6px;
+    left: 6px;
+    right: auto;
+    width: 28px;
+    height: 28px;
+    opacity: 0;
+}
+
+.edit-mode-active .photo-item > .locked-toggle-btn,
+.edit-mode-active .document-element > .locked-toggle-btn,
+.edit-mode-active .audio-element > .locked-toggle-btn {
+    opacity: 0.85;
+}
+
+
+/* ============================================
+   Banner-Save-Button
+   ============================================ */
+
+.banner-save-btn {
+    margin-left  : auto;
+    background   : rgba(255,255,255,0.15);
+    color        : #fff;
+    border       : 1px solid rgba(255,255,255,0.3);
+    border-radius: 5px;
+    padding      : 4px 14px;
+    font-size    : 0.85rem;
+    cursor       : pointer;
+    transition   : background 0.2s;
+    flex-shrink  : 0;
+}
+.banner-save-btn:hover { background: rgba(255,255,255,0.28); }
+
+@media (max-width: 768px) {
+    .banner-save-btn { padding: 4px 10px; font-size: 0.78rem; }
+}
+
+
+/* ============================================
+   Undo / Redo Buttons im Edit-Banner
+   ============================================ */
+
+.undo-redo-buttons {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.banner-undo-btn,
+.banner-redo-btn {
+    background   : rgba(255,255,255,0.12);
+    color        : #fff;
+    border       : 1px solid rgba(255,255,255,0.25);
+    border-radius: 5px;
+    padding      : 4px 10px;
+    font-size    : 1rem;
+    cursor       : pointer;
+    transition   : background 0.2s, opacity 0.2s;
+    flex-shrink  : 0;
+    line-height  : 1;
+}
+
+.banner-undo-btn:hover:not(:disabled),
+.banner-redo-btn:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
+
+.banner-undo-btn:disabled,
+.banner-redo-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .banner-undo-btn,
+    .banner-redo-btn { padding: 4px 8px; font-size: 0.9rem; }
+}
+
+
+/* ============================================
+   Header Edit-Controls (Undo/Redo/Status)
+   ============================================ */
+.edit-header-btn { font-size: 1.1rem; transition: opacity 0.2s; }
+.edit-header-btn:disabled { opacity: 0.35; cursor: default; }
+.edit-save-status {
+    font-size: 0.78rem;
+    color: var(--text-secondary, #aab0bb);
+    text-align: center;
+    min-height: 1em;
+    margin-top: 2px;
+    transition: color 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    justify-content: center;
+}
+.edit-save-status.hidden { display: none; }
+.edit-save-status .save-icon { width: 13px; height: 13px; flex-shrink: 0; }
+.edit-save-status .save-icon-spin { animation: mpd-save-spin 1s linear infinite; }
+@keyframes mpd-save-spin { to { transform: rotate(360deg); } }
+
+
+/* Error-Elemente im Edit-Modus: immer vollbreite sichtbare Box */
+#content.edit-grid-mode .photo-item--missing {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    min-height: 80px;
+    border: 2px dashed #c0392b !important;
+    position: relative;
+}
+
+/* Tour-Element Edit-Mode: Karte nicht interaktiv im Bearbeitungsmodus */
+.edit-grid-mode .tour-element .tour-map { pointer-events: none; }

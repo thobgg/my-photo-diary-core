@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>My Photo Diary — Installation auf Synology</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+    font-family: Literata, Georgia, 'Times New Roman', serif;
+    background: #0a0a0a; color: #e0e0e0;
+    line-height: 1.65; font-size: 15.5px;
+}
+.wrap { max-width: 820px; margin: 0 auto; padding: 2rem 1.2rem 4rem; }
+header.hero { text-align: center; margin-bottom: 2.2rem; position: relative; }
+header.hero h1 { font-size: 1.7rem; color: #fff; }
+header.hero .claim { color: #c8922a; font-style: italic; font-size: 0.95rem; margin-top: 0.2rem; }
+.lang-switch {
+    position: absolute; right: 0; top: 0;
+    background: #1a1a1a; border: 1px solid #333; color: #e0e0e0;
+    border-radius: 6px; padding: 0.35rem 0.7rem; cursor: pointer; font: inherit; font-size: 0.85rem;
+}
+.lang-switch:hover { border-color: #2E75B6; }
+nav.toc {
+    background: #151515; border: 1px solid #262626; border-radius: 10px;
+    padding: 1rem 1.3rem; margin-bottom: 2.2rem; font-size: 0.92rem;
+}
+nav.toc a { color: #4F81BD; text-decoration: none; }
+nav.toc a:hover { text-decoration: underline; }
+nav.toc ol { margin-left: 1.2rem; }
+h1, h2, h3 { font-family: Archivo, 'Helvetica Neue', Arial, sans-serif; }
+h2 {
+    color: #2E75B6; font-size: 1.25rem; margin: 2.4rem 0 0.8rem;
+    padding-bottom: 0.3rem; border-bottom: 2px solid #234; scroll-margin-top: 1rem;
+}
+h3 { color: #4F81BD; font-size: 1.02rem; margin: 1.5rem 0 0.5rem; }
+p { margin-bottom: 0.8rem; }
+ul, ol { margin: 0 0 0.9rem 1.4rem; }
+li { margin-bottom: 0.3rem; }
+kbd, code {
+    background: #1e1e1e; border: 1px solid #333; border-radius: 4px;
+    padding: 0.05rem 0.4rem; font-size: 0.86em; color: #e0a83a;
+    font-family: "Courier Prime", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+table { border-collapse: collapse; width: 100%; margin: 0.6rem 0 1.1rem; font-size: 0.92rem; }
+th, td { border: 1px solid #2e2e2e; padding: 0.45rem 0.65rem; text-align: left; vertical-align: top; }
+th { background: #1a2530; color: #cfe0f0; }
+tr:nth-child(even) td { background: #121212; }
+.tip {
+    background: rgba(200,146,42,0.08); border-left: 3px solid #c8922a;
+    border-radius: 0 8px 8px 0; padding: 0.7rem 1rem; margin: 0.9rem 0; font-size: 0.93rem;
+}
+.step { counter-increment: step; }
+ol.steps { list-style: none; margin-left: 0; counter-reset: step; }
+ol.steps > li { position: relative; padding-left: 2.4rem; margin-bottom: 0.9rem; }
+ol.steps > li::before {
+    content: counter(step); counter-increment: step;
+    position: absolute; left: 0; top: 0.05rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: #2E75B6; color: #fff; font-family: Archivo, Arial, sans-serif; font-weight: 600;
+    font-size: 0.85rem; display: flex; align-items: center; justify-content: center;
+}
+figure { margin: 1rem 0 1.3rem; }
+figure img {
+    display: block; width: 100%; height: auto; border: 1px solid #2e2e2e;
+    border-radius: 8px; background: #151515;
+}
+figcaption { font-size: 0.85rem; color: #9a9a9a; margin-top: 0.4rem; }
+footer { margin-top: 3.5rem; text-align: center; color: #666; font-size: 0.85rem; }
+footer a { color: #4F81BD; }
+[data-lang="de"] .en { display: none; }
+[data-lang="en"] .de { display: none; }
+@media (max-width: 520px) { body { font-size: 14.5px; } .wrap { padding: 1.2rem 0.9rem 3rem; } }
+</style>
+    <link rel="stylesheet" href="/css/fonts.css">
+</head>
+<body data-lang="de">
+<div class="wrap">
+
+<header class="hero">
+    <button class="lang-switch" onclick="toggleLang()" id="lang-btn">English</button>
+    <h1>My Photo Diary — <span class="de">Installation auf Synology</span><span class="en">Installing on Synology</span></h1>
+    <div class="claim">where your memories stay yours.</div>
+</header>
+
+<nav class="toc">
+    <ol>
+        <li><a href="#voraussetzungen"><span class="de">Was du brauchst</span><span class="en">What you need</span></a></li>
+        <li><a href="#installation"><span class="de">Installation in fünf Minuten</span><span class="en">Installation in five minutes</span></a></li>
+        <li><a href="#erster-start"><span class="de">Der erste Start</span><span class="en">First start</span></a></li>
+        <li><a href="#unterwegs"><span class="de">Zugriff von unterwegs</span><span class="en">Access from anywhere</span></a></li>
+        <li><a href="#app"><span class="de">Die App fürs Handy</span><span class="en">The phone app</span></a></li>
+        <li><a href="#pflege"><span class="de">Updates, Daten, Deinstallation</span><span class="en">Updates, data, uninstalling</span></a></li>
+        <li><a href="#klemmt"><span class="de">Wenn etwas klemmt</span><span class="en">When something's stuck</span></a></li>
+    </ol>
+</nav>
+
+<!-- ═══════════════ 1 ═══════════════ -->
+<h2 id="voraussetzungen"><span class="de">1. Was du brauchst</span><span class="en">1. What you need</span></h2>
+
+<div class="de">
+<p>My Photo Diary läuft als Paket direkt auf deiner Synology. Du brauchst keine
+Kommandozeile und musst nichts von Hand einrichten, nur diese Dinge müssen da sein:</p>
+<table>
+<tr><th>Was</th><th>Warum</th></tr>
+<tr><td>Synology NAS mit <b>DSM 7.2</b> oder neuer</td><td>Ältere Versionen kennen den Container Manager nicht.</td></tr>
+<tr><td><b>Container Manager</b> (aus dem Paketzentrum)</td><td>Darin läuft My Photo Diary. <b>Bitte vorher installieren</b> — DSM verlangt ihn, bevor es My Photo Diary annimmt. Er ist für die Plus-Modelle und die meisten Modelle ab 2019 verfügbar, nicht für die J-Serie.</td></tr>
+<tr><td><b>Internet</b> während der Installation</td><td>Einmalig werden rund 150&nbsp;MB Grundbausteine geladen. Danach läuft alles ohne Internet; nur Landkarten kommen von außen.</td></tr>
+<tr><td>Rund <b>1&nbsp;GB</b> freier Platz, <b>2&nbsp;GB</b> Arbeitsspeicher</td><td>Für das Programm und die Vorschaubilder.</td></tr>
+<tr><td>Eine <b>Freigabe mit Fotos</b>, meist <code>photo</code></td><td>Das ist eure gemeinsame Sammlung. Sie bleibt, wo sie ist; nichts wird kopiert oder importiert.</td></tr>
+<tr><td><b>Benutzer-Home-Dienst</b> aktiviert (Systemsteuerung → Benutzer und Gruppen → Erweitert)</td><td>Nur nötig, wenn jede Person auch einen eigenen, privaten Bereich haben soll. Dieser Bereich ist der Ordner <code>Photos</code> im Home-Ordner der Person; <b>er muss existieren</b>, sonst bleibt der Bereich aus. Anlegen kann ihn die Person selbst in der Datei-Station. My Photo Diary sieht davon ausschließlich die Foto-Ordner, nicht die übrigen Home-Verzeichnisse. Kommt ein Ordner oder Konto später dazu, einmal Stoppen und Starten im Paketzentrum.</td></tr>
+</table>
+<div class="tip"><b>Was My Photo Diary nie tut:</b> deine Fotos verändern, verschieben oder in eine Datenbank importieren. Ein Album ist ein Ordner, und das bleibt so.</div>
+</div>
+<div class="en">
+<p>My Photo Diary runs as a package right on your Synology. No command line,
+nothing to set up by hand; only these things need to be in place:</p>
+<table>
+<tr><th>What</th><th>Why</th></tr>
+<tr><td>Synology NAS with <b>DSM 7.2</b> or newer</td><td>Older versions don't have Container Manager.</td></tr>
+<tr><td><b>Container Manager</b> (from Package Center)</td><td>My Photo Diary runs inside it. <b>Please install it first</b> — DSM requires it before it accepts My Photo Diary. It's available on the Plus models and most models from 2019 on, not on the J series.</td></tr>
+<tr><td><b>Internet</b> during installation</td><td>About 150&nbsp;MB of building blocks are downloaded once. Afterwards everything runs offline; only maps come from outside.</td></tr>
+<tr><td>About <b>1&nbsp;GB</b> free space, <b>2&nbsp;GB</b> RAM</td><td>For the program and the preview images.</td></tr>
+<tr><td>A <b>shared folder with photos</b>, usually <code>photo</code></td><td>That's your family collection. It stays where it is; nothing is copied or imported.</td></tr>
+<tr><td><b>User home service</b> enabled (Control Panel → User &amp; Group → Advanced)</td><td>Only needed if each person should also get a private space of their own. That space is the folder <code>Photos</code> inside the person's home directory; <b>it must exist</b>, otherwise there is no personal space. The person can create it in File Station. My Photo Diary only ever sees the photo folders, not the rest of the home directories. If a folder or account is added later, stop and start the package once.</td></tr>
+</table>
+<div class="tip"><b>What My Photo Diary never does:</b> alter, move or import your photos into a database. An album is a folder, and it stays that way.</div>
+</div>
+
+<!-- ═══════════════ 2 ═══════════════ -->
+<h2 id="installation"><span class="de">2. Installation in fünf Minuten</span><span class="en">2. Installation in five minutes</span></h2>
+
+<div class="de">
+<ol class="steps">
+<li><b>Container Manager installieren.</b> Paketzentrum → suchen → <b>Container Manager</b> → Installieren. Ohne ihn nimmt DSM My Photo Diary nicht an.</li>
+<li><b>Paketdatei holen.</b> Lade <code>MPD-&lt;Version&gt;.spk</code> auf deinen Computer.</li>
+</ol>
+<figure><img src="screenshots/01-container-manager-fehlt.png" alt="Ohne Container Manager lehnt DSM das Paket ab."><figcaption><span class="de">Ohne Container Manager lehnt DSM das Paket ab.</span><span class="en">Without Container Manager, DSM refuses the package.</span></figcaption></figure>
+<ol class="steps" start="3">
+<li><b>Installieren.</b> Paketzentrum → <b>Manuelle Installation</b> → die Datei auswählen. DSM weist darauf hin, dass das Paket nicht von Synology stammt: <b>Akzeptieren</b>.</li>
+<li><b>Seite „Fotos".</b> Wähle die Freigabe mit euren Fotos, meist <code>photo</code>. Die anderen Felder kannst du so lassen: Persönliche Bereiche liegen dann im Home-Ordner jeder Person unter <code>Photos</code>.</li>
+</ol>
+<figure><img src="screenshots/02-wizard-fotos.png" alt="Seite „Fotos": nur der Name der Freigabe, kein Pfad."><figcaption><span class="de">Seite „Fotos": nur der Name der Freigabe, kein Pfad.</span><span class="en">Page "Photos": just the share name, not a path.</span></figcaption></figure>
+<ol class="steps" start="5">
+<li><b>Seite „Erreichbarkeit".</b> Der vorgeschlagene Port passt fast immer. Die öffentliche Adresse lässt du leer; sie ergibt sich später von selbst.</li>
+<li><b>Seite „Benutzer".</b> Du siehst die Konten deiner Synology. Gib jeder Person, die My Photo Diary nutzen soll, eine Rolle, und lege zwei Startpasswörter fest. <b>Mindestens ein Konto muss Admin sein</b>, in der Regel du selbst.</li>
+</ol>
+<figure><img src="screenshots/03-wizard-benutzer.png" alt="Seite „Benutzer": je Konto eine Rolle, dazu die Startpasswörter."><figcaption><span class="de">Seite „Benutzer": je Konto eine Rolle, dazu die Startpasswörter.</span><span class="en">Page "Users": one role per account, plus the starting passwords.</span></figcaption></figure>
+<ol class="steps" start="7">
+<li><b>Fertig klicken und warten.</b> DSM baut jetzt das Container-Image; das dauert zwei bis fünf Minuten, und der Balken bewegt sich dabei kaum. Danach erscheint My Photo Diary im Hauptmenü.</li>
+</ol>
+<figure><img src="screenshots/05-paketzentrum-laeuft.png" alt="Fertig: das Paketzentrum zeigt „Wird ausgeführt" und die Adresse."><figcaption><span class="de">Fertig: das Paketzentrum zeigt „Wird ausgeführt" und die Adresse.</span><span class="en">Done: Package Center shows "Running" and the address.</span></figcaption></figure>
+<h3>Die drei Rollen</h3>
+<table>
+<tr><th>Rolle</th><th>Gemeinsame Alben</th><th>Eigener Bereich</th></tr>
+<tr><td><b>Admin</b></td><td>lesen, beitragen, gestalten</td><td>alles, dazu Benutzer und Einstellungen</td></tr>
+<tr><td><b>Editor</b></td><td>lesen und beitragen (hochladen, einsortieren)</td><td>alles</td></tr>
+<tr><td><b>Viewer</b></td><td>lesen</td><td>alles</td></tr>
+</table>
+<div class="tip"><b>Wichtig:</b> My Photo Diary hat eine <b>eigene Anmeldung</b>. Die Synology-Konten sind nur die Vorlage für Namen und Ordner. Das Synology-Passwort gilt hier nicht; jede Person bekommt das Startpasswort und ersetzt es beim ersten Anmelden durch ein eigenes.</div>
+</div>
+<div class="en">
+<ol class="steps">
+<li><b>Install Container Manager.</b> Package Center → search → <b>Container Manager</b> → Install. Without it DSM refuses My Photo Diary.</li>
+<li><b>Get the package file.</b> Download <code>MPD-&lt;version&gt;.spk</code> to your computer.</li>
+<li><b>Install.</b> Package Center → <b>Manual Install</b> → pick the file. DSM warns that the package is not from Synology: <b>Accept</b>.</li>
+<li><b>Page "Photos".</b> Choose the shared folder with your photos, usually <code>photo</code>. Leave the other fields as they are: personal spaces then live in each person's home folder under <code>Photos</code>.</li>
+<li><b>Page "Access".</b> The suggested port almost always fits. Leave the public address empty; it works itself out later.</li>
+<li><b>Page "Users".</b> You'll see the accounts on your Synology. Give everyone who should use My Photo Diary a role and set two starting passwords. <b>At least one account must be Admin</b>, usually yourself.</li>
+<li><b>Click Done and wait.</b> DSM now builds the container image; this takes two to five minutes and the progress bar barely moves. Afterwards My Photo Diary appears in the main menu.</li>
+</ol>
+<h3>The three roles</h3>
+<table>
+<tr><th>Role</th><th>Shared albums</th><th>Own space</th></tr>
+<tr><td><b>Admin</b></td><td>read, contribute, design</td><td>everything, plus users and settings</td></tr>
+<tr><td><b>Editor</b></td><td>read and contribute (upload, file)</td><td>everything</td></tr>
+<tr><td><b>Viewer</b></td><td>read</td><td>everything</td></tr>
+</table>
+<div class="tip"><b>Important:</b> My Photo Diary has its <b>own login</b>. The Synology accounts are only the template for names and folders. Your Synology password doesn't apply here; everyone gets the starting password and replaces it with their own at first login.</div>
+</div>
+
+<!-- ═══════════════ 3 ═══════════════ -->
+<h2 id="erster-start"><span class="de">3. Der erste Start</span><span class="en">3. First start</span></h2>
+
+<div class="de">
+<p>Öffne My Photo Diary über das Symbol im DSM-Hauptmenü oder direkt im Browser:</p>
+<ul>
+<li>Im Heimnetz: <code>http://&lt;Name-oder-IP-deiner-NAS&gt;:8089</code> (oder der Port aus dem Assistenten)</li>
+</ul>
+<p>Melde dich mit deinem Konto und dem Startpasswort an. Beim ersten Mal wirst du
+gebeten, ein eigenes Passwort zu setzen. Danach siehst du eure Alben: Jeder Ordner
+in der Foto-Freigabe, der Bilder enthält, ist bereits eines.</p>
+<div class="tip"><b>Geduld in der ersten Stunde:</b> Nach der Installation erzeugt My Photo Diary Vorschaubilder für alle Fotos. Bei einigen tausend Bildern arbeitet die NAS dafür bis zu einer Stunde hörbar; die App ist währenddessen schon benutzbar, nur die Bilder erscheinen etwas langsamer.</div>
+</div>
+<div class="en">
+<p>Open My Photo Diary via the icon in the DSM main menu or directly in your browser:</p>
+<ul>
+<li>At home: <code>http://&lt;name-or-IP-of-your-NAS&gt;:8089</code> (or the port from the wizard)</li>
+</ul>
+<p>Log in with your account and the starting password. The first time you'll be
+asked to set a password of your own. Then you'll see your albums: every folder in
+the photo share that contains pictures already is one.</p>
+<div class="tip"><b>Patience in the first hour:</b> after installation My Photo Diary generates preview images for all photos. With a few thousand pictures the NAS works audibly for up to an hour; the app is usable meanwhile, pictures just appear a little slower.</div>
+</div>
+
+<!-- ═══════════════ 4 ═══════════════ -->
+<h2 id="unterwegs"><span class="de">4. Zugriff von unterwegs</span><span class="en">4. Access from anywhere</span></h2>
+
+<div class="de">
+<p>Im Heimnetz funktioniert alles sofort. Für den Zugriff von außen richtest du in DSM eine Reverse-Proxy-Regel ein, ohne Cloud, verschlüsselt mit einem Zertifikat deiner NAS:</p>
+<h3>Eigene Domain oder Synology-Adresse</h3>
+<ol>
+<li>Systemsteuerung → Anmeldeportal → Erweitert → <b>Reverse Proxy</b> → Erstellen.</li>
+<li>Quelle: <code>fotos.deine-domain.de</code> (oder deine <code>synology.me</code>-Adresse), HTTPS, Port 443. Ziel: <code>localhost</code>, HTTP, Port 8089 bzw. dein Port aus dem Assistenten.</li>
+<li>Systemsteuerung → Sicherheit → Zertifikat: ein Let's-Encrypt-Zertifikat für diese Adresse holen; DSM erneuert es selbst.</li>
+</ol>
+<p>Dazu gehören ein DNS-Eintrag für die Subdomain bei deinem Domain-Anbieter und die Weiterleitung der Ports 80 und 443 im Router. Beides liegt außerhalb der NAS.</p>
+</div>
+<div class="en">
+<p>At home everything works right away. For access from outside, set up a reverse proxy rule in DSM, no cloud, encrypted with a certificate of your NAS:</p>
+<h3>Your own domain or Synology address</h3>
+<ol>
+<li>Control Panel → Login Portal → Advanced → <b>Reverse Proxy</b> → Create.</li>
+<li>Source: <code>photos.your-domain.com</code> (or your <code>synology.me</code> address), HTTPS, port 443. Destination: <code>localhost</code>, HTTP, port 8089 or your port from the wizard.</li>
+<li>Control Panel → Security → Certificate: get a Let's Encrypt certificate for that address; DSM renews it by itself.</li>
+</ol>
+<p>This also needs a DNS entry for the subdomain at your domain provider and forwarding of ports 80 and 443 in your router. Both are outside the NAS.</p>
+</div>
+
+<!-- ═══════════════ 5 ═══════════════ -->
+<h2 id="app"><span class="de">5. Die App fürs Handy</span><span class="en">5. The phone app</span></h2>
+
+<div class="de">
+<p>Im Browser geht alles, aber der eigentliche Alltag findet mit der
+<b>My-Photo-Diary-App für Android</b> statt. Sie ist die empfohlene Ergänzung, weil sie
+das kann, was ein Browser nicht kann:</p>
+<ul>
+<li><b>Fotos sichern:</b> Neue Kamerafotos wandern automatisch in den Durchlauf-Ordner des Jahres auf der NAS, wahlweise in die gemeinsame Sammlung oder in deinen privaten Bereich. Die Dateien bekommen sprechende Namen mit Datum und Uhrzeit.</li>
+<li><b>Erinnerungen:</b> „Heute vor drei Jahren" als Benachrichtigung auf dem Handy, direkt von deiner NAS, ohne fremden Dienst dazwischen.</li>
+<li><b>Anschauen und kuratieren</b> unterwegs, mit Vollbild, Zeitstrahl und Karte.</li>
+</ul>
+<h3>Einrichten</h3>
+<ol>
+<li>App laden und installieren: <a href="https://bgg-home.de/mpd.apk"><code>bgg-home.de/mpd.apk</code></a>. Auf der Seite <a href="https://bgg-home.de/">bgg-home.de</a> steht daneben ein QR-Code auf dieselbe Adresse — am Rechner öffnen, mit dem Handy scannen, laden. Android fragt dabei einmal, ob es Apps aus dieser Quelle installieren darf.</li>
+<li>Am Rechner im Browser bei My Photo Diary anmelden und im Menü <b>App verbinden</b> öffnen. Die Seite zeigt die Adresse deiner Installation als QR-Code.</li>
+<li>Den Code mit der <b>Kamera-App</b> deines Handys scannen — die meisten Handys erkennen QR-Codes von selbst. Die Adresse antippen oder kopieren.</li>
+<li>In My Photo Diary beim ersten Start ins Feld <b>Serveradresse</b> einfügen: lange auf das Feld tippen, dann <i>Einfügen</i>. Abtippen musst du nichts.</li>
+<li>Mit deinem My-Photo-Diary-Konto anmelden. Das ist das Konto aus dem Wizard, nicht das Synology-Konto.</li>
+<li>Unter „Sichern" die Ordner wählen, die die App überwachen soll, meist nur den Kameraordner.</li>
+</ol>
+<div class="tip"><b>Ohne App</b> kommen Fotos trotzdem hinein: per Datei-Station, per Netzlaufwerk oder über einen Beisteuern-Link für Gäste. Die App macht es nur bequem.</div>
+</div>
+<div class="en">
+<p>Everything works in the browser, but day-to-day life happens with the
+<b>My Photo Diary app for Android</b>. It's the recommended companion because it does
+what a browser can't:</p>
+<ul>
+<li><b>Back up photos:</b> new camera photos automatically go to the year's inbox folder on the NAS, either into the shared collection or your private space. Files get speaking names with date and time.</li>
+<li><b>Memories:</b> "three years ago today" as a notification on your phone, straight from your NAS, no third-party service in between.</li>
+<li><b>View and curate</b> on the go, with full screen, timeline and map.</li>
+</ul>
+<h3>Setting up</h3>
+<ol>
+<li>Download and install the app: <a href="https://bgg-home.de/mpd.apk"><code>bgg-home.de/mpd.apk</code></a>. The page <a href="https://bgg-home.de/">bgg-home.de</a> shows a QR code for the same address — open it on your computer, scan it with your phone, download. Android will ask once whether it may install apps from this source.</li>
+<li>Log in to My Photo Diary in a browser on your computer and open <b>Connect app</b> from the menu. The page shows your installation's address as a QR code.</li>
+<li>Scan the code with your phone's <b>camera app</b> — most phones recognise QR codes by themselves. Tap or copy the address.</li>
+<li>In My Photo Diary, paste it into the <b>server address</b> field on first launch: long-press the field, then <i>Paste</i>. Nothing to type.</li>
+<li>Log in with your My Photo Diary account. That's the account from the wizard, not the Synology account.</li>
+<li>Under "Back up" pick the folders the app should watch, usually just the camera folder.</li>
+</ol>
+<div class="tip"><b>Without the app</b> photos still get in: via File Station, a network drive, or a contribution link for guests. The app just makes it convenient.</div>
+</div>
+
+<!-- ═══════════════ 6 ═══════════════ -->
+<h2 id="pflege"><span class="de">6. Updates, Daten, Deinstallation</span><span class="en">6. Updates, data, uninstalling</span></h2>
+
+<div class="de">
+<h3>Updates</h3>
+<p>Ein Update ist eine neue <code>.spk</code>-Datei, die du wie bei der Installation über <b>Manuelle Installation</b> einspielst. Konten, Einstellungen und Foto-Pfade bleiben erhalten; vorher legt das Paket eine Sicherung an. Das Update dauert wieder einige Minuten, weil das Programm neu zusammengesetzt wird.</p>
+<h3>Wo liegen die Daten?</h3>
+<table>
+<tr><th>Was</th><th>Wo</th><th>Wert</th></tr>
+<tr><td>Deine Fotos und Alben</td><td>in der Foto-Freigabe und den Home-Ordnern, als ganz normale Ordner</td><td><b>Das Einzige, was zählt.</b> Sichere das wie bisher.</td></tr>
+<tr><td>Konten, Einstellungen, Standortverlauf</td><td>Freigabe <code>docker</code>, Ordner <code>MPD/data</code></td><td>Klein, wird beim Update gesichert.</td></tr>
+<tr><td>Vorschaubilder</td><td>ebenda, <code>thumb-cache</code></td><td>Wegwerfbar, baut sich neu auf.</td></tr>
+</table>
+<h3>Deinstallation</h3>
+<p>Paketzentrum → My Photo Diary → Deinstallieren. Dabei werden Container, Image und der Ordner <code>docker/MPD/data</code> entfernt, also Konten, Einstellungen und Vorschaubilder. <b>Deine Fotos und Alben bleiben in jedem Fall unangetastet.</b> Willst du Konten und Einstellungen behalten, kopiere den Ordner vorher weg.</p>
+</div>
+<div class="en">
+<h3>Updates</h3>
+<p>An update is a new <code>.spk</code> file that you install via <b>Manual Install</b>, just like the first time. Accounts, settings and photo paths are kept; the package makes a backup first. The update again takes a few minutes because the program is reassembled.</p>
+<h3>Where is the data?</h3>
+<table>
+<tr><th>What</th><th>Where</th><th>Value</th></tr>
+<tr><td>Your photos and albums</td><td>in the photo share and the home folders, as ordinary folders</td><td><b>The only thing that matters.</b> Back it up as you always did.</td></tr>
+<tr><td>Accounts, settings, location history</td><td>shared folder <code>docker</code>, folder <code>MPD/data</code></td><td>Small, backed up on every update.</td></tr>
+<tr><td>Preview images</td><td>same place, <code>thumb-cache</code></td><td>Disposable, rebuilds itself.</td></tr>
+</table>
+<h3>Uninstalling</h3>
+<p>Package Center → My Photo Diary → Uninstall. This removes the container, the image and the folder <code>docker/MPD/data</code>, i.e. accounts, settings and previews. <b>Your photos and albums stay untouched in any case.</b> To keep accounts and settings, copy that folder away first.</p>
+</div>
+
+<!-- ═══════════════ 7 ═══════════════ -->
+<h2 id="klemmt"><span class="de">7. Wenn etwas klemmt</span><span class="en">7. When something's stuck</span></h2>
+
+<div class="de">
+<ul>
+<li><b>Die Installation schlägt fehl und lässt sich nicht wiederholen:</b> DSM merkt sich das Paket als „beschädigt". Im Paketzentrum deinstallieren, dann erneut installieren. Hilft das nicht, liegt im Paketordner das Skript <code>tools/ds-cleanup.sh</code> für Administratoren.</li>
+<li><b>Die Installation bricht mit einer Meldung ab:</b> die Meldung sagt, was fehlt: ein belegter Port, ein nicht gefundener Ordner, kein Admin-Konto. Beheben und neu starten; es bleibt nichts Halbes liegen.</li>
+<li><b>Die Installation dauert sehr lange:</b> zwei bis fünf Minuten sind normal, bei langsamem Internet auch zehn. Erst danach ist etwas verkehrt; dann steht der Grund in <code>/var/packages/MPD/var/install.log</code>.</li>
+<li><b>„Bitte installieren Sie zuerst ContainerManager":</b> genau das — Paketzentrum, Container Manager installieren, danach My Photo Diary erneut hochladen.</li>
+<li><b>Das Paket lässt sich nicht starten:</b> läuft der Container Manager? Paketzentrum → Container Manager → Ausführen.</li>
+<li><b>Der persönliche Bereich fehlt:</b> Im Home-Ordner der Person muss der Ordner <code>Photos</code> existieren. In der Datei-Station anlegen, dann im Paketzentrum einmal Stoppen und Ausführen.</li>
+</ul>
+<figure><img src="screenshots/06-persoenlicher-ordner.png" alt="Datei-Station: Ordner Photos im Home mit einem Album"><figcaption><span class="de">Der persönliche Bereich ist der Ordner <code>Photos</code> im Home der Person.</span><span class="en">The personal space is the folder <code>Photos</code> in that person's home.</span></figcaption></figure>
+<ul>
+<li><b>Seite lädt, aber Bilder fehlen:</b> die Vorschaubilder entstehen noch (Abschnitt&nbsp;3). Ein paar Minuten warten.</li>
+<li><b>„Zu viele Fehlversuche":</b> kurze Sperre nach mehreren falschen Passwörtern, eine Minute warten.</li>
+</ul>
+</div>
+<div class="en">
+<ul>
+<li><b>Installation fails and can't be retried:</b> DSM remembers the package as "broken". Uninstall it in Package Center, then install again. If that doesn't help, the package folder contains <code>tools/ds-cleanup.sh</code> for administrators.</li>
+<li><b>Installation aborts with a message:</b> the message says what's missing: a port in use, a folder not found, no admin account. Fix it and start again; nothing half-done is left behind.</li>
+<li><b>Installation takes very long:</b> two to five minutes are normal, ten with slow internet. Only after that something's wrong; the reason is then in <code>/var/packages/MPD/var/install.log</code>.</li>
+<li><b>"Please install ContainerManager first":</b> exactly that — install Container Manager in Package Center, then upload My Photo Diary again.</li>
+<li><b>The package won't start:</b> is Container Manager running? Package Center → Container Manager → Run.</li>
+<li><b>The personal space is missing:</b> the folder <code>Photos</code> must exist in that person's home directory. Create it in File Station, then stop and run the package once in Package Center.</li>
+<li><b>Page loads but pictures are missing:</b> previews are still being generated (section&nbsp;3). Wait a few minutes.</li>
+<li><b>"Too many failed attempts":</b> a short lockout after several wrong passwords, wait a minute.</li>
+</ul>
+</div>
+
+<footer>
+    <p>My Photo Diary · <span class="de">Installationsanleitung Synology</span><span class="en">Synology installation guide</span> v0.2 · 2026-09-10</p>
+    <p><a href="/hilfe">→ <span class="de">zur Hilfe für den Alltag</span><span class="en">to the everyday help</span></a></p>
+</footer>
+
+</div>
+<script>
+(function () {
+    'use strict';
+    var stored = null;
+    try { stored = localStorage.getItem('mpd_lang'); } catch (_) {}
+    var lang = stored || ((navigator.language || 'de').slice(0, 2) === 'en' ? 'en' : 'de');
+    apply(lang);
+    window.toggleLang = function () {
+        apply(document.body.getAttribute('data-lang') === 'de' ? 'en' : 'de');
+    };
+    function apply(l) {
+        document.body.setAttribute('data-lang', l);
+        document.documentElement.lang = l;
+        document.title = l === 'en' ? 'My Photo Diary — Installing on Synology' : 'My Photo Diary — Installation auf Synology';
+        document.getElementById('lang-btn').textContent = l === 'en' ? 'Deutsch' : 'English';
+        try { localStorage.setItem('mpd_lang', l); } catch (_) {}
+    }
+})();
+</script>
+</body>
+</html>

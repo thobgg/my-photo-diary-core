@@ -1,0 +1,637 @@
+/* MPD Edit-Mode — Photo
+ * Floating Aa-FAB, Photo-Remove ×, physisch-löschen, Aufnahmedatum-Badge,
+ * Foto-hinzufügen FAB + Modal, Thumbnail-Modal, Universal FAB / Speed-Dial,
+ * Video-Platzhalter.
+ */
+
+/* ============================================
+   Floating Aa-Button (Google Photos FAB-Style)
+   ============================================ */
+
+.fab-add-text {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 1000;
+
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.28), 0 1px 4px rgba(0,0,0,0.12);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.fab-add-text.hidden { display: none; }
+
+.fab-add-text:hover {
+    transform: scale(1.07);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.32);
+}
+
+.fab-add-text:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+}
+
+.fab-add-text:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.fab-icon {
+    display: block;
+    position: relative;
+    width: 22px;
+    height: 20px;
+    user-select: none;
+}
+
+/* 3 Textzeilen */
+.fab-icon::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 0;
+    right: 4px;
+    height: 2px;
+    background: #444;
+    border-radius: 1px;
+    box-shadow:
+        0 5px 0 #444,
+        0 10px 0 #444;
+}
+
+/* Stift unten rechts */
+.fab-icon::after {
+    content: '✎';
+    position: absolute;
+    bottom: -1px;
+    right: -2px;
+    font-size: 13px;
+    line-height: 1;
+    color: #444;
+    transform: scaleX(-1);
+}
+
+@media (min-width: 1600px) {
+    .fab-add-text { width: 64px; height: 64px; bottom: 36px; right: 36px; }
+    .fab-icon     { font-size: 1.3rem; }
+}
+
+@media (max-width: 768px) {
+    .fab-add-text { width: 52px; height: 52px; bottom: 20px; right: 16px; }
+    .fab-icon     { font-size: 1rem; }
+}
+
+
+/* ============================================
+   Foto entfernen – × Button auf photo-item
+   ============================================ */
+
+.photo-item { position: relative; }
+
+/* Anordnung der Bedienelemente auf der Kachel (08.09.2026, wie in der
+   App): Schloss links oben, × (aus dem Album nehmen) rechts oben,
+   Muelleimer (Datei loeschen) rechts unten, Aufnahmedatum links unten.
+   Vorher lagen × und Muelleimer nebeneinander links oben — zwei rote
+   Knoepfe mit sehr verschiedener Wirkung, 6 px auseinander. */
+
+/* Aufnahmedatum links unten — nur im Edit-Mode */
+.photo-date-badge {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: 0.2px;
+    line-height: 1.3;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+    z-index: 15;
+    transition: opacity 0.2s;
+}
+.edit-mode-active .photo-date-badge { opacity: 0.75; }
+
+.remove-photo-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    left: auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.15s, transform 0.15s;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.edit-mode-active .remove-photo-btn { opacity: 0.85; }
+.remove-photo-btn:hover { background: rgba(211, 47, 47, 0.9); transform: scale(1.12); }
+
+/* Physisch-Löschen-Button — rechts unten, weg vom × */
+.delete-file-btn {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    top: auto;
+    left: auto;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.65);
+    color: white;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.15s, transform 0.15s;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.edit-mode-active .delete-file-btn { opacity: 0.85; }
+.delete-file-btn:hover { background: rgba(180, 0, 0, 0.95); transform: scale(1.12); }
+
+/* Highlight für neu hinzugefügte Fotos */
+.photo-item.new-photo-highlight {
+    outline: 3px solid #667eea;
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+
+/* ============================================
+   Foto hinzufügen – + FAB Button
+   ============================================ */
+
+.fab-add-photo {
+    position: fixed;
+    bottom: 100px;
+    right: 28px;
+    z-index: 1000;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    background: #ffffff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.28), 0 1px 4px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fab-add-photo.hidden { display: none; }
+.fab-add-photo:hover  { transform: scale(1.07); box-shadow: 0 6px 20px rgba(0,0,0,0.32); }
+.fab-add-photo:active { transform: scale(0.95); }
+
+.fab-photo-icon {
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: #333;
+    line-height: 1;
+    margin-top: -2px;
+    user-select: none;
+}
+
+@media (min-width: 1600px) {
+    .fab-add-photo { width: 64px; height: 64px; bottom: 116px; right: 36px; }
+    .fab-photo-icon { font-size: 2rem; }
+}
+
+@media (max-width: 768px) {
+    .fab-add-photo { width: 52px; height: 52px; bottom: 84px; right: 16px; }
+}
+
+
+/* ============================================
+   Foto hinzufügen – Modal
+   ============================================ */
+
+.add-photo-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.add-photo-modal.hidden { display: none; }
+
+.add-photo-modal-inner {
+    background: #1e1e1e;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.add-photo-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+}
+
+.add-photo-titles {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.add-photo-modal-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: white;
+}
+
+.add-photo-hint {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.add-photo-pickhint {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.35);
+    font-style: italic;
+}
+
+.add-photo-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.add-photo-close:hover { background: rgba(255,255,255,0.1); color: white; }
+
+.add-photo-modal-body {
+    /* Flex-column scrollable child needs flex:1 + min-height:0 — without
+       min-height:0 the implicit min-height:auto blows the parent out and
+       on mobile the body can collapse so tiles render as overlapping strips. */
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    grid-auto-rows: 120px;
+    gap: 8px;
+    align-content: start;
+}
+
+.add-photo-thumb {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    background: #2a2a2a;
+    transition: transform 0.15s, box-shadow 0.15s;
+    width: 100%;
+    height: 100%;
+    min-height: 90px;  /* failsafe — if grid-auto-rows doesn't kick in on
+                          some mobile renderers, the tile still has body */
+}
+
+.add-photo-thumb:hover {
+    transform: scale(1.04);
+    box-shadow: 0 4px 16px rgba(102,126,234,0.5);
+    outline: 2px solid #667eea;
+}
+
+.add-photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.add-photo-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 6px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.add-photo-loading,
+.add-photo-empty,
+.add-photo-error {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 24px;
+    color: rgba(255,255,255,0.6);
+    font-size: 1rem;
+    line-height: 1.55;
+}
+
+/* Wenn der Body NUR eine Status-Meldung enthält (nicht das Foto-Grid),
+ * Layout auf flexbox umstellen und vertikal zentrieren — sonst klebt
+ * die Meldung oben am Header (grid auto-row = 120px, viel leerer Raum). */
+.add-photo-modal-body:has(> .add-photo-empty:only-child),
+.add-photo-modal-body:has(> .add-photo-loading:only-child),
+.add-photo-modal-body:has(> .add-photo-error:only-child) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.add-photo-error { color: #ff6b6b; }
+
+/* Hinweis auf Dateien, die MPD im Ordner nicht anzeigen kann (07.09.2026).
+ * Als volle Zeile ueber dem Raster; im Leer-Fall als Zusatz INNERHALB der
+ * Meldung, damit das :only-child-Zentrieren oben weiter greift. */
+.add-photo-skipped {
+    grid-column: 1 / -1;
+    padding: 10px 14px;
+    margin-bottom: 4px;
+    border-left: 3px solid #c8922a;
+    background: rgba(200,146,42,0.10);
+    color: rgba(255,255,255,0.78);
+    font-size: 0.86rem;
+    line-height: 1.5;
+    border-radius: 0 4px 4px 0;
+}
+
+.add-photo-skipped-inline {
+    display: block;
+    margin-top: 14px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.86rem;
+}
+
+/* === Phone (< 600px): zentriertes Modal mit Backdrop-Rand, Header gestapelt === */
+@media (max-width: 599px) {
+    .add-photo-modal {
+        padding: 16px;
+    }
+    .add-photo-modal-inner {
+        max-width: none;
+        max-height: 80vh;
+    }
+    .add-photo-modal-header {
+        padding: 14px 16px 12px;
+        align-items: flex-start;
+    }
+    .add-photo-titles {
+        flex-direction: column;
+        gap: 2px;
+    }
+    .add-photo-modal-header h2 {
+        font-size: 1.05rem;
+    }
+    .add-photo-modal-body {
+        grid-template-columns: repeat(3, 1fr);
+        grid-auto-rows: 90px;
+        gap: 6px;
+        padding: 14px 16px;
+    }
+    .add-photo-close {
+        font-size: 1.6rem;
+        padding: 8px 12px;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* === Tablet (600–1023px): Couch-Modus, großzügig zentriert === */
+@media (min-width: 600px) and (max-width: 1023px) {
+    .add-photo-modal {
+        padding: 32px;
+    }
+    .add-photo-modal-inner {
+        max-width: 720px;
+        max-height: 75vh;
+    }
+    .add-photo-modal-body {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-auto-rows: 140px;
+        gap: 10px;
+        padding: 22px 26px;
+    }
+    .add-photo-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    .add-photo-pickhint {
+        opacity: 0.7;
+    }
+}
+
+/* === Desktop (≥ 1024px): Status-Quo, Pickhint dezent als Tooltip-Charakter === */
+@media (min-width: 1024px) {
+    .add-photo-pickhint {
+        display: none;
+    }
+}
+
+
+/* ============================================
+   Thumbnail-Modal (ausgewähltes Foto als Cover)
+   ============================================ */
+
+.add-photo-thumb.thumbnail-selected {
+    outline       : 3px solid #2E75B6;
+    outline-offset: 2px;
+}
+.add-photo-thumb.thumbnail-selected::after {
+    content: "✓"; position: absolute; top: 6px; left: 6px; width: 22px; height: 22px;
+    border-radius: 50%; background: #2E75B6; color: #fff; font-size: 14px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.add-photo-thumb { position: relative; user-select: none; }
+
+/* Fussleiste der Mehrfachauswahl (08.09.2026) */
+.add-photo-footer {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 24px; border-top: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: calc(10px + var(--inset-bottom, 0px));
+}
+.add-photo-footer[hidden] { display: none; }
+.add-photo-foot-btn {
+    border: none; background: none; color: #aaa; font: inherit; font-size: .85rem;
+    cursor: pointer; padding: 6px 8px; border-radius: 6px;
+}
+.add-photo-foot-btn:hover { color: #fff; background: rgba(255,255,255,.08); }
+.add-photo-foot-count { margin-left: auto; color: #aaa; font-size: .85rem; }
+.add-photo-cta {
+    border: none; border-radius: 999px; padding: 8px 18px; font: inherit; font-size: .9rem;
+    background: #2E75B6; color: #fff; cursor: pointer;
+}
+.add-photo-cta:disabled { opacity: .45; cursor: default; }
+
+.thumbnail-modal-footer {
+    padding        : 12px 24px;
+    border-top     : 1px solid rgba(255,255,255,0.1);
+    display        : flex;
+    justify-content: flex-end;
+    flex-shrink    : 0;
+}
+
+.thumbnail-ok-btn {
+    background   : #2E75B6;
+    color        : #fff;
+    border       : none;
+    border-radius: 6px;
+    padding      : 8px 24px;
+    font-size    : 0.95rem;
+    cursor       : pointer;
+    transition   : background 0.2s;
+}
+
+.thumbnail-ok-btn:hover { background: #1a5c9a; }
+
+
+/* ============================================
+   Universal FAB / Speed-Dial (Apple-Style)
+   ============================================ */
+
+.fab-container {
+    position: fixed;
+    bottom: calc(28px + var(--inset-bottom, 0px));
+    right: 28px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+.fab-container.hidden { display: none; }
+
+.fab-main {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--accent, #2E75B6);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 18px rgba(0,0,0,.30), 0 1px 4px rgba(0,0,0,.15);
+    transition: background .18s cubic-bezier(.4,0,.2,1),
+                transform   .18s cubic-bezier(.4,0,.2,1),
+                box-shadow  .18s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+    position: relative; z-index: 1001;
+    -webkit-tap-highlight-color: transparent;
+}
+.fab-main:hover {
+    background: #1b5e9e;
+    transform: scale(1.10);
+    box-shadow: 0 8px 28px rgba(46,117,182,.45), 0 2px 6px rgba(0,0,0,.18);
+}
+.fab-main:active { transform: scale(0.94); box-shadow: 0 2px 8px rgba(0,0,0,.22); transition-duration: .07s; }
+.fab-main-icon { display: block; transition: transform .22s cubic-bezier(.4,0,.2,1); pointer-events: none; line-height: 1; }
+
+.fab-menu { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
+
+.fab-menu-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 16px 0 12px; height: 44px;
+    border-radius: 22px; border: none; cursor: pointer;
+    background: var(--header-bg, #1e2d3d);
+    color: var(--text-primary, #e8eaf0);
+    box-shadow: 0 3px 14px rgba(0,0,0,.28), 0 1px 3px rgba(0,0,0,.12);
+    font-size: .92rem; white-space: nowrap;
+    transition: background .16s cubic-bezier(.4,0,.2,1),
+                transform  .16s cubic-bezier(.4,0,.2,1),
+                box-shadow .16s cubic-bezier(.4,0,.2,1);
+    -webkit-tap-highlight-color: transparent;
+}
+.fab-menu-item:hover {
+    background: var(--accent, #2E75B6); color: #fff;
+    transform: translateX(-4px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(46,117,182,.35);
+}
+.fab-menu-item:active { transform: scale(0.97); transition-duration: .07s; }
+.fab-menu-icon  { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; line-height: 1; }
+.fab-menu-icon svg { width: 20px; height: 20px; }
+.fab-menu-label { font-size: .88rem; font-weight: 500; }
+
+.fab-backdrop {
+    position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,.20);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+.fab-backdrop.hidden { display: none; }
+
+@media (max-width: 768px) {
+    .fab-container { bottom: calc(20px + var(--inset-bottom, 0px)); right: 16px; }
+    .fab-main { width: 52px; height: 52px; font-size: 1.35rem; }
+    .fab-menu-item { height: 40px; font-size: .85rem; padding: 0 13px 0 10px; }
+    /* Phone: Text + Foto sind primär, Rest erst nach Tap auf „Mehr" */
+    .fab-advanced { display: none; }
+    .fab-menu.show-advanced .fab-advanced { display: flex; }
+    .fab-menu.show-advanced .fab-more-toggle { opacity: 0.55; }
+}
+/* Tablet/Desktop: alle Items direkt, kein Mehr-Toggle nötig */
+@media (min-width: 769px) {
+    .fab-more-toggle { display: none; }
+}
+
+
+/* ============================================
+   Video-Thumbnail Platzhalter
+   ============================================ */
+
+.video-thumb-ph {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a2538 0%, #2c3e50 100%);
+}
+.video-thumb-ph span { font-size: 2.5rem; opacity: .6; color: #fff; }

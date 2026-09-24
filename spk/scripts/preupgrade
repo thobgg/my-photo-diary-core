@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/common"
+log "preupgrade von ${SYNOPKG_OLD_PKGVER} auf ${SYNOPKG_PKGVER} — Betriebsdaten unter docker/MPD/data bleiben (Worker), Sicherung macht der Container beim nächsten Start"
+exit 0

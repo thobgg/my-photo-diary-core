@@ -1,0 +1,18 @@
+#!/bin/sh
+. "$(dirname "$0")/common"
+log "postinst (Version ${SYNOPKG_PKGVER})"
+mkdir -p "${VAR}"
+# Konten, denen der Assistent eine Rolle gegeben hat — prestart legt ihnen bei Bedarf den
+# Foto-Ordner an und haengt ihn ein.
+if [ "${SYNOPKG_PKG_STATUS}" = "INSTALL" ]; then
+    wizard_accounts="$(local_users | { out=""; while read -r u; do k="$(user_key "${u}")"; for r in admin editor viewer; do eval "sel=\${wizard_role_${k}_${r}:-}"; [ "${sel}" = "true" ] && out="${out}${u} "; done; done; echo "${out}"; })"
+    export wizard_accounts
+fi
+save_wizard
+apply_ports "$(wiz_get wizard_port)" "$(wiz_get wizard_portal_https)"
+if [ "${SYNOPKG_PKG_STATUS}" = "INSTALL" ]; then
+    write_bootstrap_spec "${TARGET}/conf/bootstrap.json" "$(wiz_get wizard_homes_root)" "$(wiz_get wizard_personal_subdir)"
+    log "Erstkonten-Spezifikation geschrieben ($(grep -o '"name"' "${TARGET}/conf/bootstrap.json" | wc -l) Konten); Container liest sie beim ersten Start"
+fi
+log "postinst fertig — Image und Container übernimmt der Container Manager"
+exit 0

@@ -1,0 +1,1614 @@
+/* Startseite. Bis 05.09.2026 lagen diese 1.596 Zeilen als <style>
+   in index.html — die Datei hatte 4.107 Zeilen, davon 260 Markup.
+   Reihenfolge beachten: laedt NACH style.css und album-share.css
+   und ueberschreibt deren Regeln bewusst. */
+
+        /* Index: #content soll Grid auf volle Breite strecken */
+        #content {
+            align-items: stretch !important;
+            width: 100% !important;
+            max-width: none !important;
+        }
+
+        /* Album Grid - Optimiert für viele Alben (Google Photos Style) */
+        /* Album Grid */
+        .album-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: var(--grid-gap, 0.6rem);
+            margin-top: 2rem;
+            padding: 0 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 481px) {
+            .album-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1599px) {
+            .album-grid {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+            }
+        }
+
+        @media (min-width: 1600px) {
+            .album-grid {
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+                max-width: 1600px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+        }
+
+        .album-card {
+            background: var(--surface);
+            border-radius: var(--card-radius, 6px);
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .album-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow);
+            border-color: var(--blue-mid);
+        }
+
+        .album-cover {
+            position: relative;
+            width: 100%;
+            padding-top: var(--cover-ratio, 100%);
+            background: var(--surface-alt);
+            overflow: hidden;
+        }
+
+        /* Mobile failsafe: padding-top:% kollabierte hier auf manchen
+           Renderern (Cards als ~30 px Streifen). Vorher fix-höhe 165px,
+           was Cover non-square machte und den Crop-Editor verzerrte
+           (Editor-Frame quadratisch, Cover ~1.21:1 → object-fit:fill
+           streckte das Bild). Jetzt aspect-ratio:1 als moderner Ersatz —
+           kollabiert nicht und macht Cover quadratisch wie auf Desktop,
+           damit der Crop ohne Stretch passt. */
+        @media (max-width: 768px) {
+            .album-grid {
+                grid-auto-rows: minmax(200px, auto) !important;
+            }
+            .album-card {
+                align-self: stretch !important;
+            }
+            .album-cover {
+                aspect-ratio: 1 !important;
+                height: auto !important;
+                padding-top: 0 !important;
+            }
+            /* object-fit:contain bewusst NICHT überschrieben — die Desktop-
+               Default-Regel (.album-cover img.album-cover-img) liefert
+               Letterbox-Blur (album-cover-blur dahinter) auch auf Phone. */
+        }
+
+        .album-cover .album-cover-blur {
+            position: absolute;
+            top: -10%;
+            left: -10%;
+            width: 120%;
+            height: 120%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(12px);
+            opacity: 0.7;
+            transform: scale(1.05);
+            pointer-events: none;
+        }
+
+        .album-cover img.album-cover-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s;
+        }
+
+        .album-card:hover .album-cover-img {
+            transform: scale(1.03);
+        }
+
+        .album-info {
+            padding: 0.35rem 0.5rem 0.4rem;
+            font-family: var(--font-family);
+            letter-spacing: var(--letter-spacing, 0);
+        }
+
+        .album-year {
+            font-size: var(--font-size-meta, 0.68rem);
+            color: var(--muted);
+            margin-bottom: 0.05rem;
+            font-weight: 500;
+        }
+
+        .album-title {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-size: var(--font-size-title, 0.82rem);
+            font-weight: var(--font-weight-title, 600);
+            line-height: 1.25;
+            color: var(--text);
+        }
+
+        .album-stats {
+            font-size: var(--font-size-meta, 0.68rem);
+            color: var(--muted);
+            margin-top: 0.1rem;
+            margin-bottom: 0;
+        }
+
+        .album-description {
+            font-size: 0.85rem;
+            color: var(--muted);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Performance: Lazy-Rendering — DEAKTIVIERT (verursachte auf Mobile
+           kollabierte Card-Höhen, weil contain-intrinsic-size: 1px 300px
+           mit padding-top:% unsauber zusammenspielte). Moderne Browser sind
+           auch ohne content-visibility ausreichend schnell für ~50 Cards.
+           Falls nötig später per JS IntersectionObserver lösen. */
+        /*
+        .album-grid {
+            content-visibility: auto;
+            contain-intrinsic-size: 1px 300px;
+        }
+        */
+
+        /* Sortier-Controls (optional für später) */
+        .controls {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .sort-label {
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .sort-select {
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .sort-select:hover {
+            border-color: #555;
+        }
+
+        /* ── Header v1.2 ── */
+        .main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding: 0.75rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-icon {
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+        }
+
+        .header-titles {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .header-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .header-slogan {
+            font-size: 0.78rem;
+            color: #7F8C8D;
+            font-style: italic;
+            white-space: nowrap;
+        }
+
+        .header-name-short {
+            display: none;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Shared Toggle */
+        .shared-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .shared-toggle input {
+            display: none;
+        }
+
+        .toggle-track {
+            width: 40px;
+            height: 22px;
+            background: #444;
+            border-radius: 11px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .shared-toggle input:checked + .toggle-track {
+            background: #2E75B6;
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: left 0.2s;
+        }
+
+        .shared-toggle input:checked + .toggle-track .toggle-thumb {
+            left: 21px;
+        }
+
+        .toggle-label {
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        /* Avatar */
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #2E75B6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .user-menu {
+            position: absolute;
+            top: 44px;
+            right: 0;
+            background: var(--surface-alt, #1e2a35);
+            border: 1px solid var(--border, #3a4a5a);
+            border-radius: 8px;
+            padding: 8px 0;
+            min-width: 160px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.4);
+            z-index: 200;
+        }
+        .user-menu-info {
+            padding: 8px 14px;
+            font-size: 12px;
+            color: var(--text-muted, #7F8C8D);
+            border-bottom: 1px solid var(--border, #3a4a5a);
+            margin-bottom: 4px;
+        }
+        .user-menu-info strong { color: var(--text, #e0e0e0); }
+        .user-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            padding: 8px 14px;
+            color: var(--text, #e0e0e0);
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .user-menu button:hover { background: rgba(255,255,255,.06); }
+
+        .user-role {
+            font-size: 0.8rem;
+            color: #7F8C8D;
+        }
+
+        /* Album-Rahmen: shared vs personal */
+        .album-card.space-shared {
+            border-color: #2E75B6;
+        }
+
+        .album-card.space-personal {
+            border-color: #c8922a;
+        }
+
+        .space-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-bottom: 0.25rem;
+            display: inline-block;
+        }
+
+        .space-badge.shared {
+            background: rgba(46, 117, 182, 0.2);
+            color: #4F81BD;
+        }
+
+        .space-badge.personal {
+            background: rgba(200, 146, 42, 0.2);
+            color: #c8922a;
+        }
+
+        .header-name-row {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+        }
+
+        .header-stats {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .main-header { position: relative; }
+        .hamburger-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            z-index: 999;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.4);
+            min-width: 160px;
+            max-height: calc(100vh - 70px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 6px 0;
+        }
+        .hamburger-item.locked { opacity: .6; }
+        .hamburger-item.locked::after { content: "🔒"; margin-left: auto; font-size: .8rem; opacity: .9; }
+        .hamburger-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            text-align: left;
+            padding: 9px 16px;
+            background: none;
+            border: none;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background .12s;
+        }
+        .hamburger-item:hover { background: var(--surface-alt); }
+        .hamburger-item.active { color: #2E75B6; font-weight: 600; }
+        .hamburger-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.85; }
+
+        .space-filter-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: border-color .15s, color .15s;
+            white-space: nowrap;
+        }
+        .space-filter-btn:hover { border-color: var(--blue-mid); color: var(--text); }
+        .space-filter-btn.active { border-color: #2E75B6; color: #2E75B6; }
+
+        /* Pillenreihe (08.09.2026): Zahlen matt ohne Rahmen, Abstand, dann die
+           Einstiege als Knoepfe — zwei Gruppen, die vorher gleich aussahen. */
+        .stat-pill--count { background: transparent; border-color: transparent; padding-left: 4px; padding-right: 4px; }
+        .stat-pill-gap { display: inline-block; width: 10px; flex-shrink: 0; }
+        .stat-pill--btn { text-decoration: none; cursor: pointer; font: inherit; font-size: 0.78rem; transition: background .15s, transform .12s; }
+        .stat-pill--btn:hover { background: rgba(255,255,255,0.13); transform: translateY(-1px); }
+
+        .mem-more { display: inline-block; margin: .4rem 0 0; font-size: .85rem; color: var(--muted, #888); text-decoration: underline dotted; text-underline-offset: 3px; }
+        .mem-more:hover { color: var(--text); }
+
+        .stat-pill {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            color: #aaa;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .stat-pill svg { width: 13px; height: 13px; flex-shrink: 0; opacity: 0.85; }
+
+        .stat-pill strong {
+            color: #e0e0e0;
+            font-weight: 600;
+        }
+
+        @media (max-width: 480px) {
+            .header-name { display: none; }
+            .header-name-short { display: inline; }
+            .user-role { display: none; }
+            .header-stats { display: none; }
+            .toggle-label { display: none; }
+            .header-controls { gap: 0.4rem; }
+            .header-brand { flex: 1; }
+            #theme-btn {
+                font-size: 0.85rem !important;
+                padding: 0.25rem 0.35rem !important;
+                background: transparent !important;
+            }
+        }
+
+        /* ── Tablet Portrait (481–1100px): Header komprimieren ── */
+        @media (min-width: 481px) and (max-width: 1100px) {
+            .header-slogan { display: none; }
+            .header-stats { display: none; }
+            .user-role { display: none; }
+            .toggle-label { display: none; }
+            .mpd-search-wrap { max-width: 180px; }
+            .mpd-search-kbd { display: none; }
+            .mpd-search-brand-text { display: none; }
+            .mpd-search-divider { display: none; }
+            .header-controls { gap: 0.4rem; }
+        }
+
+        /* ── Overflow-Schutz: kein horizontaler Scroll ── */
+        body { overflow-x: hidden; }
+
+        /* ── "Album hinzufügen" Button ── */
+        .btn-add-album {
+            display: none;
+            padding: 0.4rem 0.9rem;
+            background: #2E75B6;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+
+        .btn-add-album:hover { background: #4F81BD; }
+
+        @media (max-width: 480px) {
+            .btn-add-album { font-size: 0.75rem; padding: 0.35rem 0.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            .btn-add-album { display: none !important; }
+        }
+
+        /* ── FAB: nur auf Mobile ── */
+        .fab-add-album {
+            display: none;
+            position: fixed;
+            bottom: calc(1.5rem + var(--inset-bottom, 0px));
+            right: 1.5rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #2E75B6;
+            color: #fff;
+            border: none;
+            font-size: 1.75rem;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, transform 0.15s;
+        }
+
+        .fab-add-album:hover  { background: #4F81BD; transform: scale(1.07); }
+        .fab-add-album.visible { display: flex; }
+
+        @media (min-width: 481px) {
+            .fab-add-album { display: none !important; }
+        }
+
+        /* ── Gemeinsame Modal-Basis ── */
+        .mpd-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mpd-modal-overlay.open { display: flex; }
+
+        .mpd-modal {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 10px;
+            width: min(520px, 93vw);
+            max-height: 85vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .mpd-modal h3 { margin: 0; font-size: 1.05rem; color: #fff; }
+
+        .mpd-modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .btn-modal-cancel {
+            padding: 0.5rem 1.1rem;
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #444;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-modal-cancel:hover { border-color: #666; color: #fff; }
+
+        /* ── Scan-Modal: Ordner-Liste ── */
+        .scan-info {
+            font-size: 0.85rem;
+            color: #7F8C8D;
+        }
+
+        .folder-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 50vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .folder-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.65rem 0.75rem;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .folder-item:hover { border-color: #2E75B6; background: #161f2a; }
+
+        .folder-thumb {
+            width: 52px;
+            height: 52px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: #222;
+        }
+
+        .folder-thumb-placeholder {
+            width: 52px;
+            height: 52px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            background: #222;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            opacity: 0.35;
+        }
+
+        .folder-info { flex: 1; min-width: 0; }
+
+        .folder-name {
+            font-size: 0.9rem;
+            color: #ddd;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .folder-meta {
+            font-size: 0.77rem;
+            color: #666;
+            margin-top: 0.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* ── Erstell-Modal ── */
+        .create-field label {
+            display: block;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 0.4rem;
+        }
+
+        .create-field .field-value { font-size: 0.95rem; color: #ddd; }
+
+        .thumb-preview-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .thumb-preview-img {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 2px solid #2E75B6;
+            flex-shrink: 0;
+        }
+
+        .thumb-change-link {
+            font-size: 0.82rem;
+            color: #2E75B6;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .thumb-change-link:hover { color: #4F81BD; }
+
+        .thumb-picker {
+            display: none;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 0.4rem;
+            max-height: 210px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 0.5rem;
+            background: #111;
+            margin-top: 0.5rem;
+        }
+
+        .thumb-picker.open { display: grid; }
+
+        .thumb-picker-item {
+            width: 100%;
+            padding-top: 100%;
+            position: relative;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            transition: border-color 0.15s;
+        }
+
+        .thumb-picker-item img {
+            position: absolute;
+            inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+
+        .thumb-picker-item:hover   { border-color: #555; }
+        .thumb-picker-item.selected { border-color: #2E75B6; }
+
+        .thumb-picker-msg {
+            color: #666;
+            font-size: 0.82rem;
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .btn-create {
+            padding: 0.5rem 1.25rem;
+            background: #2E75B6;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .btn-create:hover     { background: #4F81BD; }
+        .btn-create:disabled  { background: #333; color: #666; cursor: not-allowed; }
+
+        .create-status {
+            font-size: 0.82rem;
+            color: #e8a030;
+            min-height: 1.2em;
+        }
+
+        .space-badge-sm {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        .space-badge-sm.shared   { background: rgba(46,117,182,0.2); color: #4F81BD; }
+        .space-badge-sm.personal { background: rgba(200,146,42,0.2);  color: #c8922a; }
+
+        /* ── Memories-Teaser (Mini-Hero unter Header) ── */
+        .memories-teaser {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 1.2rem;
+            background: linear-gradient(90deg, rgba(200,146,42,0.10), rgba(46,117,182,0.06));
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        .memories-teaser:hover {
+            background: linear-gradient(90deg, rgba(200,146,42,0.18), rgba(46,117,182,0.12));
+        }
+        .memories-teaser[hidden] { display: none; }
+        .mt-icon  { color: #c8922a; font-size: 1.05rem; flex-shrink: 0; }
+        /* Handschrift nur hier — der Erinnerungs-Moment (CI 1.2). Etwas
+           groesser als der Lauftext, weil Schreibschrift kleiner wirkt. */
+        .mt-text  { flex: 1; color: var(--text); font-family: 'Playwrite DE VA', cursive; font-size: 1.05rem; line-height: 1.4; }
+        .mt-arrow { color: var(--text-muted); font-size: 1.2rem; flex-shrink: 0; }
+        @media (max-width: 480px) {
+            .memories-teaser { font-size: 0.82rem; padding: 0.5rem 0.9rem; gap: 0.45rem; }
+        }
+
+        /* ── Memories-Overlay (Web-Ansicht, 04.09.2026) ── */
+        .mem-overlay {
+            position: fixed; inset: 0; z-index: 1200;
+            background: rgba(0,0,0,0.72);
+            display: flex; align-items: flex-start; justify-content: center;
+            overflow-y: auto; padding: 4vh 1rem;
+        }
+        .mem-overlay[hidden] { display: none; }
+        .mem-box {
+            background: var(--surface, #1a1a1a);
+            border: 1px solid var(--border, #333);
+            border-radius: 12px;
+            width: min(920px, 100%);
+            margin-bottom: 4vh;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+        }
+        .mem-header {
+            display: flex; align-items: center; gap: 0.6rem;
+            padding: 0.9rem 1.2rem;
+            border-bottom: 1px solid var(--border, #333);
+            position: sticky; top: 0;
+            background: var(--surface, #1a1a1a);
+            border-radius: 12px 12px 0 0;
+            z-index: 1;
+        }
+        .mem-header h2 { font-size: 1.05rem; font-weight: 600; flex: 1; margin: 0; }
+        .mem-header .mt-icon { font-size: 1.2rem; }
+        .mem-close {
+            background: none; border: none; color: var(--text-muted, #888);
+            font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 0.2rem;
+        }
+        .mem-close:hover { color: var(--text, #e0e0e0); }
+        .mem-body { padding: 1rem 1.2rem 1.4rem; }
+        .mem-year { margin-bottom: 1.4rem; }
+        .mem-year h3 {
+            font-size: 0.95rem; font-weight: 600; margin: 0 0 0.6rem;
+            color: #c8922a;
+        }
+        .mem-year h3 .mem-year-sub { color: var(--text-muted, #888); font-weight: 400; }
+        .mem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 8px;
+        }
+        .mem-tile {
+            position: relative; display: block;
+            aspect-ratio: 1; overflow: hidden; border-radius: 6px;
+            background: var(--surface-alt, #222);
+        }
+        .mem-tile img {
+            width: 100%; height: 100%; object-fit: cover; display: block;
+            transition: transform 0.25s;
+        }
+        .mem-tile:hover img { transform: scale(1.05); }
+        .mem-tile .mem-loc {
+            position: absolute; left: 0; right: 0; bottom: 0;
+            padding: 0.5rem 0.5rem 0.3rem;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            color: #fff; font-size: 0.72rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        @media (max-width: 480px) {
+            .mem-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+        }
+
+        /* ── Album-Cover: gespeicherter Crop fuellt die Kachel ──────── */
+        .album-cover.has-crop .album-cover-img {
+            width: calc(100% / var(--cw, 1));
+            height: calc(100% / var(--ch, 1));
+            left: calc(var(--cx, 0) / var(--cw, 1) * -100%);
+            top:  calc(var(--cy, 0) / var(--ch, 1) * -100%);
+            max-width: none;
+            max-height: none;
+            object-fit: fill;
+        }
+        .album-card:hover .album-cover.has-crop .album-cover-img {
+            /* Crop ueberschreibt die scale-Animation, sonst wandert der Ausschnitt sichtbar */
+            transform: none;
+        }
+        .album-cover.has-crop .album-cover-blur { display: none; }
+
+        /* ── Cover-Lupe + Kebab (Landing-Album-Card) ────────────────────
+           Default = visible. Works on every touch device including the
+           WebAPK quirk where (hover:none) misreports as false — the old
+           setup made both icons opacity:0/pointer-events:none by default
+           and only un-hid them via media queries, which left WebAPK
+           users with invisible, untappable buttons.
+           Desktop with mouse re-hides them until cover-hover (override
+           below). Phone gets bigger touch targets in the @media block. */
+        .alb-crop-lupe {
+            position: absolute;
+            top: 4px; right: 42px;        /* 32 + 6 lücke, vom kebab aus */
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            z-index: 3;
+            opacity: 0.7;
+            pointer-events: auto;
+            transition: opacity .12s, background .12s;
+        }
+        .alb-crop-lupe:focus-visible { opacity: 1; outline: 2px solid #fff; outline-offset: 1px; }
+
+        /* ── Album-Card Kebab + Popover (Phase B) ────────────────────── */
+        .alb-kebab {
+            position: absolute;
+            top: 4px; right: 4px;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.3);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            padding: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; line-height: 1;
+            z-index: 3;
+            opacity: 0.7;
+            pointer-events: auto;
+            transition: opacity .12s, background .12s;
+        }
+        .alb-kebab:focus-visible { opacity: 1; outline: 2px solid #fff; outline-offset: 1px; }
+        .alb-kebab svg { width: 16px; height: 16px; }
+        /* Lupe links neben Kebab platzieren wenn beide vorhanden */
+        .album-cover .pz-lupe { right: 42px; }
+
+        /* No (hover:hover) hide-by-default block — the WebAPK reports
+           (hover:hover) as TRUE and (hover:none) as FALSE, so any
+           hover-conditional visibility leaves WebAPK users without
+           tappable icons. Default visibility above is unconditional;
+           only the cursor-darken stays as cheap hover feedback. */
+        .alb-crop-lupe:hover, .alb-kebab:hover {
+            background: rgba(0, 0, 0, 0.55);
+            opacity: 1;
+        }
+
+        /* Phone: bigger touch targets (28×28 was below WCAG / Apple HIG
+           44×44 minimum) plus 12px gap so fat-finger taps don't slide
+           between lupe and kebab. */
+        @media (max-width: 599px) {
+            .alb-crop-lupe {
+                top: 6px; right: 58px;     /* kebab right 6 + width 40 + 12px gap */
+                width: 40px; height: 40px;
+            }
+            .alb-kebab {
+                top: 6px; right: 6px;
+                width: 40px; height: 40px;
+                font-size: 1.5rem;
+            }
+            .album-cover .pz-lupe { right: 58px; }
+        }
+
+        .alb-popover {
+            position: fixed;
+            min-width: 200px;
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 8px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+            padding: .35rem 0;
+            z-index: 11000;
+            font-size: .92rem;
+        }
+        .alb-popover button {
+            display: flex; align-items: center; gap: .55rem;
+            width: 100%;
+            padding: .55rem .9rem;
+            background: none;
+            border: none;
+            color: inherit;
+            text-align: left;
+            font: inherit;
+            cursor: pointer;
+        }
+        .alb-popover button:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
+        .alb-popover button:disabled { color: var(--muted, #888); cursor: not-allowed; opacity: .65; }
+        .alb-popover .alb-pop-divider {
+            height: 1px;
+            background: var(--border, #333);
+            margin: .3rem 0;
+        }
+        .alb-popover .alb-pop-destructive { color: #e06868; }
+        .alb-popover .alb-pop-destructive:hover:not(:disabled) { background: rgba(224,104,104,0.12); }
+        .alb-popover .alb-pop-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: .8; display: inline-flex; align-items: center; justify-content: center; }
+        .alb-popover .alb-pop-icon svg { width: 16px; height: 16px; }
+        .alb-pop-hint { font-size: .72rem; color: var(--muted, #888); margin-left: auto; padding-left: .5rem; }
+
+        /* Rename-Inline-Modal */
+        .alb-rename-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11500;
+            padding: 1rem;
+        }
+        .alb-rename-box {
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 10px;
+            padding: 1.1rem 1.2rem;
+            width: min(420px, 100%);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+        }
+        .alb-rename-box h3 { margin: 0 0 .8rem; font-size: 1.05rem; }
+        .alb-rename-box input {
+            width: 100%; box-sizing: border-box;
+            padding: .55rem .7rem;
+            border-radius: 6px;
+            border: 1px solid var(--border, #444);
+            background: var(--surface-alt, #141414);
+            color: inherit;
+            font: inherit;
+        }
+        .alb-rename-actions {
+            display: flex; justify-content: flex-end; gap: .5rem;
+            margin-top: 1rem;
+        }
+        .alb-rename-actions button {
+            padding: .5rem 1rem;
+            border-radius: 6px;
+            font: inherit;
+            cursor: pointer;
+            border: none;
+        }
+        .alb-rename-cancel {
+            background: transparent;
+            border: 1px solid var(--border, #444) !important;
+            color: var(--text, #e0e0e0);
+        }
+        .alb-rename-ok {
+            background: var(--blue, #2E75B6);
+            color: #fff; font-weight: 600;
+        }
+        .alb-rename-ok:hover { background: #4F81BD; }
+        .alb-rename-status { font-size: .82rem; color: var(--muted, #888); margin-top: .5rem; min-height: 1.1em; }
+
+        /* Cover-Picker fuer Landing — nutzt vorhandene Modal-Klassen wo moeglich */
+        .alb-coverpick-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11500;
+            padding: 1rem;
+        }
+        .alb-coverpick-box {
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 10px;
+            width: min(820px, 100%); max-height: 88vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .alb-coverpick-header {
+            padding: .9rem 1.1rem;
+            border-bottom: 1px solid var(--border, #333);
+            display: flex; align-items: center; gap: .6rem;
+        }
+        .alb-coverpick-header h3 { margin: 0; font-size: 1.02rem; flex: 1; }
+        .alb-coverpick-header button {
+            background: none; border: none; color: var(--muted, #888);
+            font-size: 1.4rem; cursor: pointer; padding: .1rem .5rem;
+        }
+        .alb-coverpick-body {
+            flex: 1; overflow-y: auto;
+            overscroll-behavior: contain;
+            min-height: 0;            /* allow flex child to shrink in column-flex parent */
+            padding: .8rem 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            grid-auto-rows: 110px;    /* row floor — without this aspect-ratio collapses on mobile */
+            gap: .5rem;
+        }
+        .alb-coverpick-tile {
+            position: relative; aspect-ratio: 1;
+            min-height: 110px;        /* failsafe — tile keeps body even if grid-auto-rows is ignored */
+            border-radius: 6px; overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            background: #222;
+            transition: border-color .12s;
+        }
+        .alb-coverpick-tile:hover { border-color: var(--blue, #2E75B6); }
+        .alb-coverpick-tile.current { border-color: var(--blue, #2E75B6); }
+        .alb-coverpick-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .alb-coverpick-tile.current::after {
+            content: '✓';
+            position: absolute; top: 4px; right: 4px;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            background: var(--blue, #2E75B6);
+            color: #fff;
+            font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .alb-coverpick-status {
+            padding: .6rem 1.1rem;
+            border-top: 1px solid var(--border, #333);
+            font-size: .85rem; color: var(--muted, #888);
+            min-height: 1.4em;
+        }
+
+        /* Share / Mail / Contacts Modal-Styles wurden nach
+           /css/album-share.css ausgelagert (geteilt mit album.html). */
+
+        /* ── Einstellungen-Modal ───────────────────────────────────── */
+        .alb-settings-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.55);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11500;
+            padding: 1rem;
+        }
+        .alb-settings-box {
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 10px;
+            width: min(520px, 100%);
+            max-height: min(85vh, 720px);
+            display: flex; flex-direction: column;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+        }
+        .alb-settings-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: .9rem 1.1rem;
+            border-bottom: 1px solid var(--border, #333);
+        }
+        .alb-settings-header h3 { margin: 0; font-size: 1.05rem; }
+        .alb-settings-close {
+            background: transparent; border: none;
+            color: var(--muted, #888); font-size: 1.5rem;
+            cursor: pointer; line-height: 1; padding: 0 .2rem;
+        }
+        .alb-settings-close:hover { color: var(--text, #e0e0e0); }
+        .alb-settings-body {
+            padding: 1rem 1.1rem;
+            overflow-y: auto;
+            overscroll-behavior: contain; flex: 1;
+        }
+        .alb-settings-section { margin-bottom: 1.4rem; }
+        .alb-settings-section:last-child { margin-bottom: 0; }
+        .alb-settings-section-title {
+            font-size: .78rem; font-weight: 600;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            color: var(--muted, #888);
+            margin-bottom: .5rem;
+            display: flex; align-items: center; gap: .5rem;
+        }
+        .alb-settings-section-badge {
+            background: rgba(46, 117, 182, 0.15);
+            color: var(--blue, #2E75B6);
+            padding: 1px 6px;
+            border-radius: 3px;
+            font-size: .7rem;
+            letter-spacing: 0.03em;
+            text-transform: none;
+        }
+        .alb-settings-row {
+            display: flex; align-items: center; gap: 1rem;
+            padding: .7rem .8rem;
+            background: var(--surface-alt, #141414);
+            border: 1px solid var(--border, #333);
+            border-radius: 6px;
+            margin-bottom: .5rem;
+            cursor: pointer;
+        }
+        .alb-settings-row:last-child { margin-bottom: 0; }
+        .alb-settings-row-label { flex: 1; min-width: 0; }
+        .alb-settings-row-name {
+            font-size: .9rem; font-weight: 500;
+            color: var(--text, #e0e0e0);
+        }
+        .alb-settings-row-hint {
+            font-size: .78rem;
+            color: var(--muted, #888);
+            margin-top: .2rem;
+            line-height: 1.4;
+        }
+        .alb-settings-row-btn {
+            flex: 0 0 auto;
+            padding: .4rem .8rem;
+            border-radius: 5px;
+            border: 1px solid var(--border, #444);
+            background: var(--surface, #1f1f1f);
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            font-size: .82rem;
+        }
+        .alb-settings-row-btn:hover { background: var(--surface-alt, #2a2a2a); }
+        .alb-settings-switch {
+            flex: 0 0 auto;
+            width: 18px; height: 18px;
+            cursor: pointer;
+        }
+        .alb-settings-status {
+            font-size: .82rem;
+            color: var(--muted, #888);
+            min-height: 1.1em;
+            margin-top: .4rem;
+        }
+        .alb-settings-companion-select,
+        .alb-settings-companion-input {
+            background: var(--surface, #1e1e1e);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 6px;
+            padding: .3rem .5rem;
+            font-size: .88rem;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+        .alb-settings-companion-select { cursor: pointer; }
+        .alb-settings-companion-input  { width: 11rem; }
+
+        /* ── User-Admin-Modal (display_name + role inline editierbar) ── */
+        .alb-users-table { display: flex; flex-direction: column; gap: .35rem; }
+        .alb-users-toolbar {
+            display: flex; justify-content: flex-end;
+            margin-bottom: .6rem;
+        }
+        .alb-users-add {
+            padding: .35rem .7rem;
+            border-radius: 5px;
+            border: 1px solid var(--border, #444);
+            background: var(--surface, #1f1f1f);
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            font-size: .8rem;
+        }
+        .alb-users-add:hover { background: var(--surface-alt, #2a2a2a); }
+        .alb-users-head, .alb-users-row {
+            display: grid;
+            grid-template-columns: minmax(80px, 1fr) 110px minmax(100px, 1.3fr) auto;
+            gap: .5rem;
+            align-items: center;
+        }
+        .alb-users-actions {
+            display: flex; gap: .25rem;
+            justify-content: flex-end;
+        }
+        .alb-users-pw, .alb-users-del {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--border, #333);
+            background: var(--surface, #1f1f1f);
+            color: var(--muted, #ccc);
+            cursor: pointer;
+            font-size: .95rem; line-height: 1;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            padding: 0;
+            transition: background .12s ease, border-color .12s ease, color .12s ease;
+        }
+        .alb-users-pw:hover { background: var(--surface-alt, #2a2a2a); }
+        .alb-users-del:hover { border-color: #e06868; color: #e06868; }
+        .alb-users-pw:disabled, .alb-users-del:disabled {
+            opacity: .35; cursor: not-allowed;
+        }
+        .alb-users-pw svg, .alb-users-del svg, .alb-users-commit svg { width: 15px; height: 15px; }
+        .alb-users-head {
+            font-size: .72rem; font-weight: 600;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            color: var(--muted, #888);
+            padding: 0 .8rem .3rem;
+        }
+        .alb-users-row {
+            padding: .55rem .8rem;
+            background: var(--surface-alt, #141414);
+            border: 1px solid var(--border, #333);
+            border-radius: 6px;
+        }
+        .alb-users-row-name {
+            font-size: .9rem; font-weight: 500;
+            color: var(--text, #e0e0e0);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .alb-users-row-display,
+        .alb-users-role-select {
+            background: var(--surface, #1f1f1f);
+            border: 1px solid var(--border, #333);
+            border-radius: 4px;
+            color: inherit; font: inherit; font-size: .88rem;
+            padding: .35rem .5rem;
+            min-width: 0; width: 100%;
+            transition: border-color .12s ease;
+        }
+        .alb-users-row-display:focus,
+        .alb-users-role-select:focus {
+            outline: none;
+            border-color: var(--blue, #2E75B6);
+        }
+        .alb-users-role-select:disabled {
+            opacity: .6;
+            cursor: not-allowed;
+        }
+        .alb-users-row.is-dirty .alb-users-row-display,
+        .alb-users-row.is-dirty .alb-users-role-select {
+            border-color: var(--accent, #e8b040);
+        }
+        .alb-users-row.saved .alb-users-row-display,
+        .alb-users-row.saved .alb-users-role-select {
+            border-color: #4aa05a;
+        }
+        .alb-users-commit {
+            width: 28px; height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--border, #333);
+            background: var(--surface, #1f1f1f);
+            color: var(--muted, #888);
+            cursor: not-allowed;
+            font-size: 1rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            padding: 0;
+            opacity: .45;
+            transition: opacity .12s ease, transform .12s ease,
+                        background .12s ease, border-color .12s ease, color .12s ease;
+        }
+        .alb-users-row.is-dirty .alb-users-commit {
+            border-color: var(--accent, #e8b040);
+            background: var(--accent, #e8b040);
+            color: #111;
+            opacity: 1;
+            cursor: pointer;
+        }
+        .alb-users-row.is-dirty .alb-users-commit:hover { filter: brightness(1.08); }
+        .alb-users-row.is-dirty .alb-users-commit:active { transform: scale(0.96); }
+        .alb-users-hint {
+            font-size: .78rem;
+            color: var(--muted, #888);
+            margin-top: .6rem;
+            line-height: 1.5;
+        }
+        .alb-users-footer {
+            display: flex; justify-content: flex-end;
+            margin-top: 1rem;
+            padding-top: .8rem;
+            border-top: 1px solid var(--border, #333);
+        }
+        .alb-users-done {
+            padding: .5rem 1.2rem;
+            border-radius: 5px;
+            border: 1px solid var(--border, #444);
+            background: var(--surface, #1f1f1f);
+            color: inherit;
+            cursor: pointer;
+            font: inherit;
+            font-size: .88rem;
+        }
+        .alb-users-done:hover { background: var(--surface-alt, #2a2a2a); }
+
+        /* ── Crop-Editor (oeffnet aus Lupe) ────────────────────────── */
+        .alb-cropedit-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11500;
+            padding: 1rem;
+        }
+        .alb-cropedit-box {
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #333);
+            border-radius: 10px;
+            width: min(960px, 100%);
+            max-height: 92vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .alb-cropedit-header {
+            padding: .9rem 1.1rem;
+            border-bottom: 1px solid var(--border, #333);
+            display: flex; align-items: center; gap: .6rem;
+        }
+        .alb-cropedit-header h3 { margin: 0; font-size: 1.02rem; flex: 1; }
+        .alb-cropedit-header button {
+            background: none; border: none; color: var(--muted, #888);
+            font-size: 1.4rem; cursor: pointer; padding: .1rem .5rem;
+        }
+        .alb-cropedit-body {
+            flex: 1 1 auto;
+            min-height: 0;        /* allow flex-column body to shrink so actions stay visible */
+            overflow: auto;
+            padding: 1rem;
+            display: flex; flex-direction: column; align-items: center; gap: 1rem;
+        }
+        .alb-cropedit-stage {
+            position: relative;
+            background: #000;
+            user-select: none;
+            touch-action: none;
+            line-height: 0;
+            max-width: 100%;
+            flex-shrink: 1;       /* stage may shrink so preview + status keep room */
+            min-height: 0;
+        }
+        .alb-cropedit-stage img.alb-cropedit-img {
+            display: block;
+            max-width: 100%;
+            max-height: 50vh;     /* was 60vh — leave headroom for preview + status on portraits */
+            width: auto; height: auto;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+        .alb-cropedit-frame {
+            position: absolute;
+            box-sizing: border-box;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 99999px rgba(0,0,0,0.55);
+            cursor: move;
+            touch-action: none;
+        }
+        .alb-cropedit-handle {
+            position: absolute;
+            width: 16px; height: 16px;
+            background: #fff;
+            border: 1.5px solid #2E75B6;
+            border-radius: 50%;
+            box-sizing: border-box;
+            touch-action: none;
+        }
+        .alb-cropedit-handle.tl { top: -9px; left: -9px;  cursor: nwse-resize; }
+        .alb-cropedit-handle.tr { top: -9px; right: -9px; cursor: nesw-resize; }
+        .alb-cropedit-handle.bl { bottom: -9px; left: -9px;  cursor: nesw-resize; }
+        .alb-cropedit-handle.br { bottom: -9px; right: -9px; cursor: nwse-resize; }
+        .alb-cropedit-preview {
+            display: flex; align-items: center; gap: .9rem;
+            font-size: .85rem; color: var(--muted, #888);
+        }
+        .alb-cropedit-preview-box {
+            width: 96px; height: 96px;
+            border: 1px solid var(--border, #333);
+            border-radius: 6px;
+            overflow: hidden;
+            background: #222;
+            position: relative;
+        }
+        .alb-cropedit-preview-box img {
+            position: absolute;
+            width: calc(100% / var(--cw, 1));
+            height: calc(100% / var(--ch, 1));
+            left: calc(var(--cx, 0) / var(--cw, 1) * -100%);
+            top:  calc(var(--cy, 0) / var(--ch, 1) * -100%);
+            max-width: none;
+            max-height: none;
+            object-fit: fill;
+        }
+        .alb-cropedit-status {
+            font-size: .85rem;
+            color: var(--muted, #888);
+            text-align: center;
+            min-height: 1.2em;
+        }
+        .alb-cropedit-actions {
+            padding: .8rem 1.1rem;
+            border-top: 1px solid var(--border, #333);
+            display: flex; justify-content: flex-end; gap: .5rem;
+        }
+        .alb-cropedit-actions button {
+            padding: .55rem 1.1rem;
+            border-radius: 6px;
+            font: inherit;
+            cursor: pointer;
+            border: none;
+        }
+        .alb-cropedit-cancel {
+            background: transparent;
+            border: 1px solid var(--border, #444) !important;
+            color: var(--text, #e0e0e0);
+        }
+        .alb-cropedit-save {
+            background: var(--blue, #2E75B6);
+            color: #fff; font-weight: 600;
+        }
+        .alb-cropedit-save:hover:not(:disabled) { background: #4F81BD; }
+        .alb-cropedit-save:disabled { background: #4a5566; color: #888; cursor: not-allowed; }
+
+        /* Phone: vertical space is tight, especially on portrait photos.
+           Shrink the stage cap and the preview box so preview + status +
+           action bar all stay visible without scrolling under the bar. */
+        @media (max-width: 599px) {
+            .alb-cropedit-stage img.alb-cropedit-img { max-height: 40vh; }
+            .alb-cropedit-preview-box { width: 64px; height: 64px; }
+            .alb-cropedit-body { gap: .6rem; padding: .7rem; }
+            .alb-cropedit-actions { padding: .6rem .9rem; }
+        }
+
+        /* ── Album-Loeschen: Type-to-confirm-Modal ──────────────────── */
+        .alb-delete-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.65);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 11500;
+            padding: 1rem;
+        }
+        .alb-delete-box {
+            background: var(--surface, #1f1f1f);
+            color: var(--text, #e0e0e0);
+            border: 1px solid #c62828;
+            border-radius: 10px;
+            width: min(560px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 1.4rem 1.5rem 1.2rem;
+            box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+        }
+        .alb-delete-icon { line-height: 1; margin-bottom: .5rem; color: #e06868; }
+        .alb-delete-icon svg { width: 38px; height: 38px; }
+        .alb-delete-box h3 {
+            margin: 0 0 .9rem;
+            font-size: 1.15rem;
+            color: #e06868;
+        }
+        .alb-delete-body {
+            font-size: .9rem; line-height: 1.5;
+            color: var(--text, #e0e0e0);
+        }
+        .alb-delete-body ul { margin: .4rem 0 .8rem; padding-left: 1.3rem; }
+        .alb-delete-body li { margin: .3rem 0; }
+        .alb-delete-prompt {
+            display: block;
+            margin: 1.1rem 0 .35rem;
+            font-size: .9rem;
+        }
+        .alb-delete-prompt code {
+            background: rgba(255,255,255,0.08);
+            padding: .1rem .4rem;
+            border-radius: 3px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: .92em;
+            color: #f0c040;
+        }
+        .alb-delete-box input {
+            width: 100%; box-sizing: border-box;
+            padding: .55rem .7rem;
+            border-radius: 6px;
+            border: 1px solid var(--border, #444);
+            background: var(--surface-alt, #141414);
+            color: inherit;
+            font: inherit;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+        .alb-delete-box input:focus {
+            outline: none;
+            border-color: var(--blue, #2E75B6);
+        }
+        .alb-delete-actions {
+            display: flex; justify-content: flex-end; gap: .5rem;
+            margin-top: 1rem;
+        }
+        .alb-delete-actions button {
+            padding: .55rem 1.1rem;
+            border-radius: 6px;
+            font: inherit;
+            cursor: pointer;
+            border: none;
+        }
+        .alb-delete-cancel {
+            background: transparent;
+            border: 1px solid var(--border, #444) !important;
+            color: var(--text, #e0e0e0);
+        }
+        .alb-delete-go {
+            background: #c62828;
+            color: #fff; font-weight: 600;
+            transition: background .15s, box-shadow .15s;
+        }
+        .alb-delete-go:hover:not(:disabled) {
+            background: #a51f1f;
+            box-shadow: 0 2px 8px rgba(198,40,40,0.35);
+        }
+        .alb-delete-go:disabled {
+            background: #4a2222;
+            color: #888;
+            cursor: not-allowed;
+        }

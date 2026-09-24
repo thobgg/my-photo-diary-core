@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <title>Durchlauf · My Photo Diary</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css?v=8">
+    <link rel="stylesheet" href="/css/lightbox.css?v=5">
+    <link rel="stylesheet" href="/css/durchlauf.css?v=2">
+    <script>document.documentElement.setAttribute("data-theme", localStorage.getItem("mpd-theme") || "dark")</script>
+    <script src="/js/mpd-dialog.js?v=3"></script>
+    <script src="/js/i18n.js?v=48"></script>
+    <script src="/js/version-watch.js?v=5"></script>
+</head>
+<body class="dl-body">
+
+    <header class="album-header dl-header">
+        <div class="header-left">
+            <a href="/" class="header-brand" data-i18n-attr="title:album.back_title" title="Zur Startseite">
+                <img class="header-icon" src="/img/brand/mpd-logo.svg" alt="My Photo Diary">
+                <div class="header-titles">
+                    <span class="header-name">My Photo Diary</span>
+                    <span class="header-name-short">MPD</span>
+                    <span class="header-slogan">where your memories stay yours.</span>
+                </div>
+            </a>
+        </div>
+        <div class="header-center">
+            <h1 id="dl-title" data-i18n="durchlauf.title">Durchlauf</h1>
+            <div class="album-subline">
+                <span id="dl-meta" class="album-meta"></span>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="dl-space-toggle" id="dl-space-toggle" role="group">
+                <button type="button" class="dl-space-btn" data-space="shared" data-i18n="nav.filter_shared">Shared</button>
+                <button type="button" class="dl-space-btn" data-space="personal" data-i18n="nav.filter_personal">Personal</button>
+            </div>
+            <button id="theme-btn" class="icon-button" data-i18n-attr="title:album.theme_btn_title" title="Theme wechseln" onclick="toggleThemePicker()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/>
+                    <circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/>
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.17-4.5-9-10-9z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <main class="dl-main">
+        <p class="dl-intro" id="dl-intro" data-i18n="durchlauf.intro">Dateien in diesem Bestand, die noch in keinem Album stehen — aus der Kamera, per Upload oder von Hand hineingelegt.</p>
+        <div id="dl-unscanned" class="dl-unscanned" hidden></div>
+        <div id="dl-groups" class="dl-groups"></div>
+        <div id="dl-status" class="dl-status"></div>
+        <div id="dl-sentinel" class="dl-sentinel" aria-hidden="true"></div>
+    </main>
+
+    <div id="dl-bar" class="dl-bar" hidden>
+        <span id="dl-bar-count" class="dl-bar-count"></span>
+        <button type="button" class="dl-bar-btn dl-bar-btn--ghost" id="dl-bar-all" data-i18n="durchlauf.select_all">Alle</button>
+        <button type="button" class="dl-bar-btn dl-bar-btn--ghost" id="dl-bar-none" data-i18n="durchlauf.select_none">Keine</button>
+        <span class="dl-bar-spacer"></span>
+        <button type="button" class="dl-bar-btn" id="dl-bar-import" data-i18n="durchlauf.btn_import">Einsortieren nach…</button>
+        <button type="button" class="dl-bar-btn dl-bar-btn--danger" id="dl-bar-delete" data-i18n="durchlauf.btn_delete">Löschen</button>
+    </div>
+
+    <div id="dl-yearbar" class="dl-yearbar" hidden></div>
+
+    <div id="content" hidden></div>
+
+    <div class="lightbox" id="lightbox">
+        <div class="lb-container">
+            <div class="lb-main">
+                <button class="lb-close" onclick="closeLightbox()" aria-label="Schließen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <button class="lb-nav lb-prev" onclick="navigate(-1)" aria-label="Vorheriges">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="lb-nav lb-next" onclick="navigate(1)" aria-label="Nächstes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <div class="lb-image-wrapper" id="lb-image-wrapper" onclick="toggleZoom()">
+                    <img id="lb-img" src="" alt="">
+                    <video id="lb-video" controls preload="none" style="display:none;max-width:100%;max-height:90vh;"></video>
+                </div>
+                <div class="lb-bottom-controls">
+                    <div class="lb-counter" id="lb-counter"></div>
+                    <button class="lb-btn" id="slideshow-btn" onclick="toggleSlideshow()">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                        <span data-i18n="lightbox.slideshow">Slideshow</span>
+                    </button>
+                    <button class="lb-btn" onclick="downloadImage()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span data-i18n="lightbox.download">Download</span>
+                    </button>
+                </div>
+            </div>
+            <div class="lb-sidebar hidden" id="lb-sidebar"><div id="lb-metadata"></div></div>
+        </div>
+    </div>
+
+    <script src="/js/theme.js?v=3"></script>
+    <script src="/js/blurhash.js"></script>
+    <script src="/js/lightbox-core.js?v=8"></script>
+    <script src="/js/album-state.js"></script>
+    <script src="/js/album-render.js?v=35"></script>
+    <script src="/js/durchlauf.js?v=3"></script>
+</body>
+</html>

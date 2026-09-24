@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest==8.1.1
+ruff==0.4.2
+# Starlette 0.35 (FastAPI 0.109) TestClient benötigt httpx mit dem 'app='-Shortcut;
+# httpx>=0.28 hat ihn entfernt → auf die letzte kompatible Version pinnen.
+httpx==0.27.2

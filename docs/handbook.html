@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="de" data-lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Photo Diary — Handbuch / Handbook</title>
+<meta name="description" content="Self-contained developer handbook for My Photo Diary 3.0 (DE/EN). Architecture, areas, data model, operations.">
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root {
+  --navy:  #2C3E50;
+  --slate: #34495E;
+  --blue:  #2E75B6;
+  --lblue: #4F81BD;
+  --rblue: #5B9BD5;
+  --grey:  #7F8C8D;
+  --lgrey: #95a5a6;
+  --red:   #C0392B;
+  --gold:  #c8922a;
+  --dark:  #0d1117;
+  --paper: #f5f1e6;
+  --ink:   #e8e6e0;
+  --mid:   #cfc8b8;
+  --border: rgba(91,155,213,0.2);
+  --border-soft: rgba(255,255,255,0.06);
+  --code-bg: rgba(255,255,255,0.04);
+  --code-border: rgba(91,155,213,0.18);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; scroll-padding-top:5rem; }
+body {
+  background:var(--dark);
+  color:var(--ink);
+  font-family:Georgia,'Times New Roman',serif;
+  line-height:1.7;
+  font-size:16px;
+}
+
+/* ───────── Top nav ───────── */
+nav.top {
+  position:fixed; top:0; left:0; right:0; z-index:100;
+  padding:0.85rem 1.5rem;
+  display:flex; align-items:center; justify-content:space-between;
+  background:rgba(13,17,23,0.94);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);
+}
+.brand { display:flex; align-items:center; gap:0.6rem; font-family:Georgia,serif; }
+.brand-logo {
+  width:26px; height:26px;
+  background:linear-gradient(135deg,var(--blue),var(--rblue));
+  border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-weight:700; font-size:0.78rem;
+  font-family:-apple-system,sans-serif;
+  letter-spacing:-0.02em;
+}
+.brand-name { color:#fff; font-size:0.95rem; }
+.brand-sub  {
+  font-family:-apple-system,sans-serif; font-size:0.66rem;
+  color:var(--gold); letter-spacing:0.18em; text-transform:uppercase;
+  margin-left:0.5rem;
+}
+
+.lang-toggle {
+  display:flex; align-items:center; gap:0;
+  font-family:-apple-system,sans-serif; font-size:0.74rem;
+  border:1px solid var(--border); border-radius:3px;
+  overflow:hidden;
+}
+.lang-toggle button {
+  background:transparent; color:var(--grey);
+  border:none; padding:0.35rem 0.85rem; cursor:pointer;
+  font-family:inherit; font-size:inherit;
+  letter-spacing:0.05em;
+  transition:all 0.15s;
+}
+.lang-toggle button:hover { color:#fff; }
+.lang-toggle button.is-active {
+  background:var(--blue); color:#fff;
+}
+
+/* ───────── Layout ───────── */
+.shell {
+  display:grid;
+  grid-template-columns:240px 1fr;
+  gap:0;
+  max-width:1280px;
+  margin:0 auto;
+  padding-top:4rem;
+}
+
+aside.toc {
+  position:sticky;
+  top:4rem;
+  align-self:start;
+  height:calc(100vh - 4rem);
+  overflow-y:auto;
+  padding:2rem 1.25rem 2rem 2rem;
+  border-right:1px solid var(--border);
+  font-family:-apple-system,sans-serif;
+  font-size:0.82rem;
+}
+.toc-label {
+  font-size:0.66rem; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:1rem;
+}
+.toc ol { list-style:none; padding-left:0; counter-reset:toc; }
+.toc ol > li {
+  counter-increment:toc;
+  margin-bottom:0.35rem;
+  padding-left:1.6rem;
+  position:relative;
+}
+.toc ol > li::before {
+  content:counter(toc) ".";
+  position:absolute; left:0;
+  color:var(--gold); font-weight:600;
+  font-size:0.78rem;
+}
+.toc a {
+  color:var(--mid); text-decoration:none;
+  transition:color 0.15s;
+}
+.toc a:hover { color:var(--rblue); }
+.toc ol ol {
+  margin-top:0.3rem; padding-left:0.4rem;
+  counter-reset:none;
+}
+.toc ol ol > li {
+  counter-increment:none;
+  padding-left:0.7rem;
+  font-size:0.78rem;
+  margin-bottom:0.2rem;
+  border-left:1px solid var(--border-soft);
+}
+.toc ol ol > li::before { content:none; }
+.toc ol ol a { color:var(--lgrey); }
+
+main {
+  padding:2rem 3rem 8rem;
+  max-width:880px;
+}
+
+/* ───────── Typography ───────── */
+h1, h2, h3, h4 {
+  font-family:Georgia,serif; font-weight:400;
+  color:#fff; letter-spacing:-0.005em;
+}
+h1 {
+  font-size:clamp(2rem,4vw,3rem);
+  line-height:1.15; margin-bottom:1rem;
+  border-bottom:1px solid var(--border);
+  padding-bottom:1rem;
+}
+h1 em { color:var(--rblue); font-style:italic; }
+h2 {
+  font-size:clamp(1.4rem,2.6vw,1.9rem);
+  margin-top:3.5rem; margin-bottom:1rem;
+  padding-top:1rem;
+  border-top:1px dashed var(--border-soft);
+}
+h2 em { color:var(--rblue); font-style:italic; }
+h3 {
+  font-size:1.18rem; margin-top:2.2rem; margin-bottom:0.7rem;
+  color:var(--mid);
+}
+h3 em { color:var(--gold); font-style:italic; }
+h4 {
+  font-size:0.98rem; margin-top:1.5rem; margin-bottom:0.5rem;
+  color:var(--rblue);
+  font-family:-apple-system,sans-serif;
+  text-transform:uppercase; letter-spacing:0.08em;
+  font-weight:600;
+}
+
+p { margin-bottom:1rem; color:var(--ink); }
+p.lede {
+  font-size:1.08rem; font-style:italic; color:var(--mid);
+  border-left:3px solid var(--gold);
+  padding-left:1.2rem;
+  margin:1.5rem 0;
+}
+.section-label {
+  font-family:-apple-system,sans-serif; font-size:0.7rem;
+  letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:0.5rem;
+  display:block;
+}
+
+ul, ol { margin:0 0 1rem 1.5rem; }
+ul li, ol li { margin-bottom:0.4rem; }
+ul ul, ol ol { margin-top:0.3rem; margin-bottom:0.3rem; }
+
+a { color:var(--rblue); text-decoration:none; border-bottom:1px dotted var(--rblue); }
+a:hover { color:#fff; border-color:#fff; }
+
+strong { color:#fff; }
+em { font-style:italic; }
+
+code, .mono {
+  font-family:'SF Mono','Menlo','Consolas','Liberation Mono',monospace;
+  font-size:0.86em;
+}
+:not(pre) > code {
+  background:var(--code-bg);
+  border:1px solid var(--code-border);
+  padding:0.05em 0.42em;
+  border-radius:3px;
+  color:var(--gold);
+  font-size:0.82em;
+}
+pre {
+  background:var(--code-bg);
+  border:1px solid var(--code-border);
+  border-left:3px solid var(--blue);
+  border-radius:3px;
+  padding:1rem 1.2rem;
+  margin:1rem 0 1.4rem;
+  overflow-x:auto;
+  font-size:0.82rem;
+  line-height:1.55;
+  color:var(--mid);
+}
+pre code {
+  color:inherit;
+  background:none;
+  border:none;
+  padding:0;
+}
+
+blockquote {
+  border-left:3px solid var(--gold);
+  padding:0.4rem 0 0.4rem 1.5rem;
+  margin:1.4rem 0;
+  font-style:italic;
+  color:var(--mid);
+}
+
+table {
+  border-collapse:collapse;
+  width:100%;
+  margin:1rem 0 1.4rem;
+  font-family:-apple-system,sans-serif;
+  font-size:0.86rem;
+}
+th, td {
+  text-align:left;
+  padding:0.55rem 0.85rem;
+  border-bottom:1px solid var(--border-soft);
+  vertical-align:top;
+}
+th {
+  color:var(--gold);
+  font-size:0.68rem; letter-spacing:0.16em; text-transform:uppercase;
+  font-weight:600;
+  border-bottom:1px solid var(--border);
+}
+td { color:var(--mid); }
+td code { font-size:0.8em; }
+
+hr {
+  border:none;
+  height:1px;
+  background:linear-gradient(to right, transparent, var(--border), transparent);
+  margin:3rem 0;
+}
+
+/* ───────── Cards ───────── */
+.cards {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  margin:1.5rem 0;
+}
+.card {
+  background:var(--dark);
+  padding:1.4rem 1.4rem 1.2rem;
+}
+.card-cat {
+  font-family:-apple-system,sans-serif;
+  font-size:0.62rem; letter-spacing:0.18em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:0.4rem;
+}
+.card h4 {
+  margin-top:0; color:#fff;
+  font-family:Georgia,serif; text-transform:none;
+  letter-spacing:-0.005em; font-size:1.05rem;
+  font-weight:400;
+}
+.card p {
+  font-family:-apple-system,sans-serif;
+  font-size:0.84rem; color:var(--mid);
+  line-height:1.6; margin-bottom:0;
+}
+
+/* ───────── Endpoint table ───────── */
+table.endpoints td:first-child { white-space:nowrap; }
+.method {
+  display:inline-block;
+  font-family:-apple-system,sans-serif;
+  font-size:0.66rem; font-weight:700;
+  padding:0.1em 0.55em;
+  border-radius:2px;
+  letter-spacing:0.05em;
+  margin-right:0.4em;
+  min-width:42px; text-align:center;
+}
+.m-get    { background:rgba(46,117,182,0.18); color:var(--rblue); }
+.m-post   { background:rgba(200,146,42,0.18); color:var(--gold); }
+.m-delete { background:rgba(192,57,43,0.18);  color:#e76e63; }
+.m-put    { background:rgba(91,155,213,0.18); color:var(--rblue); }
+.m-patch  { background:rgba(91,155,213,0.18); color:var(--rblue); }
+
+/* ───────── Architecture diagrams ───────── */
+.diagram {
+  margin:2rem 0;
+  padding:1.5rem;
+  border:1px solid var(--border);
+  border-radius:3px;
+  background:rgba(46,117,182,0.03);
+  text-align:center;
+}
+.diagram svg { max-width:100%; height:auto; }
+.diagram-caption {
+  font-family:-apple-system,sans-serif;
+  font-size:0.78rem;
+  color:var(--lgrey);
+  margin-top:0.7rem;
+  font-style:italic;
+}
+
+/* ───────── Callouts ───────── */
+.note, .warn, .tip {
+  border-left:3px solid;
+  padding:0.85rem 1.1rem;
+  margin:1.2rem 0;
+  font-family:-apple-system,sans-serif;
+  font-size:0.86rem;
+  border-radius:0 3px 3px 0;
+}
+.note  { border-color:var(--rblue); background:rgba(46,117,182,0.06); }
+.warn  { border-color:var(--red);   background:rgba(192,57,43,0.06); }
+.tip   { border-color:var(--gold);  background:rgba(200,146,42,0.06); }
+.note strong, .warn strong, .tip strong {
+  font-family:-apple-system,sans-serif;
+  font-size:0.66rem; letter-spacing:0.16em; text-transform:uppercase;
+  display:block; margin-bottom:0.3rem;
+}
+.note strong { color:var(--rblue); }
+.warn strong { color:#e76e63; }
+.tip strong  { color:var(--gold); }
+
+/* ───────── Hero ───────── */
+.hero {
+  padding:4rem 0 3rem;
+  border-bottom:1px solid var(--border);
+  margin-bottom:2.5rem;
+}
+.hero-tag {
+  font-family:-apple-system,sans-serif;
+  font-size:0.7rem; letter-spacing:0.22em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:1.4rem;
+}
+.hero h1 {
+  font-size:clamp(2.2rem,5vw,3.6rem);
+  border-bottom:none;
+  padding-bottom:0;
+  margin-bottom:1rem;
+}
+.hero p.lede {
+  font-size:1.18rem;
+  border-left:none; padding-left:0;
+  color:var(--mid); margin:0 0 1.5rem;
+}
+.hero-meta {
+  font-family:-apple-system,sans-serif;
+  font-size:0.78rem;
+  color:var(--grey);
+  padding-top:1.2rem;
+  border-top:1px dashed var(--border-soft);
+  display:flex; gap:2rem; flex-wrap:wrap;
+}
+.hero-meta strong { color:var(--mid); font-weight:500; }
+
+/* ───────── Language switching ───────── */
+.lang-block { display:none; }
+body[data-lang="de"] .lang-block.lang-de { display:block; }
+body[data-lang="en"] .lang-block.lang-en { display:block; }
+.lang-inline { display:none; }
+body[data-lang="de"] .lang-inline.lang-de { display:inline; }
+body[data-lang="en"] .lang-inline.lang-en { display:inline; }
+
+/* ───────── Footer ───────── */
+footer.handbook-foot {
+  border-top:1px solid var(--border);
+  padding:2rem 3rem;
+  font-family:-apple-system,sans-serif;
+  font-size:0.76rem;
+  color:var(--grey);
+  display:flex; justify-content:space-between; gap:1rem;
+  flex-wrap:wrap;
+  max-width:880px;
+  margin:0 auto;
+}
+footer.handbook-foot strong { color:var(--mid); }
+
+/* ───────── Mobile ───────── */
+@media (max-width:880px){
+  .shell { grid-template-columns:1fr; }
+  aside.toc {
+    position:static; height:auto;
+    border-right:none; border-bottom:1px solid var(--border);
+    padding:1.5rem;
+    max-height:30vh;
+  }
+  main { padding:1.5rem; }
+  nav.top { padding:0.7rem 1rem; }
+  .brand-sub { display:none; }
+  footer.handbook-foot { padding:1.5rem; }
+}
+
+/* ───────── Print ───────── */
+@media print {
+  nav.top, aside.toc, .lang-toggle { display:none; }
+  body { background:#fff; color:#222; }
+  .shell { display:block; padding-top:0; }
+  main { padding:0; max-width:none; }
+  h1, h2, h3, h4 { color:#000; page-break-after:avoid; }
+  pre, table, .diagram, .cards { page-break-inside:avoid; }
+  pre { background:#f5f5f5; color:#222; border-color:#ccc; }
+  a { color:#000; border:none; text-decoration:underline; }
+  .card { background:none; border:1px solid #ccc; }
+  td, p, ul li, ol li { color:#333; }
+  body[data-lang="de"] .lang-en, body[data-lang="en"] .lang-de { display:none; }
+}
+</style>
+</head>
+<body data-lang="de">
+
+<nav class="top">
+  <div class="brand">
+    <div class="brand-logo">M</div>
+    <div>
+      <span class="brand-name">My Photo Diary</span>
+      <span class="brand-sub"><span class="lang-inline lang-de">Handbuch</span><span class="lang-inline lang-en">Handbook</span></span>
+    </div>
+  </div>
+  <div class="lang-toggle" role="group" aria-label="Language">
+    <button type="button" data-lang-set="de" class="is-active">DE</button>
+    <button type="button" data-lang-set="en">EN</button>
+  </div>
+</nav>
+
+<div class="shell">
+
+<aside class="toc">
+  <p class="toc-label"><span class="lang-inline lang-de">Inhalt</span><span class="lang-inline lang-en">Contents</span></p>
+  <ol>
+    <li><a href="#cover"><span class="lang-inline lang-de">Grundsätze</span><span class="lang-inline lang-en">Principles</span></a></li>
+    <li><a href="#quickstart"><span class="lang-inline lang-de">Schnellstart</span><span class="lang-inline lang-en">Quick start</span></a>
+      <ol>
+        <li><a href="#qs-install"><span class="lang-inline lang-de">Installieren</span><span class="lang-inline lang-en">Install</span></a></li>
+        <li><a href="#qs-env">mpd.env</a></li>
+        <li><a href="#qs-users"><span class="lang-inline lang-de">Konten und Rollen</span><span class="lang-inline lang-en">Accounts and roles</span></a></li>
+      </ol>
+    </li>
+    <li><a href="#architecture"><span class="lang-inline lang-de">Architektur</span><span class="lang-inline lang-en">Architecture</span></a>
+      <ol>
+        <li><a href="#arch-lifecycle"><span class="lang-inline lang-de">Ein Request</span><span class="lang-inline lang-en">A request</span></a></li>
+        <li><a href="#arch-auth"><span class="lang-inline lang-de">Anmeldung</span><span class="lang-inline lang-en">Sign-in</span></a></li>
+        <li><a href="#arch-thumbs"><span class="lang-inline lang-de">Vorschaubilder</span><span class="lang-inline lang-en">Thumbnails</span></a></li>
+        <li><a href="#arch-core"><span class="lang-inline lang-de">Kern und Module</span><span class="lang-inline lang-en">Core and modules</span></a></li>
+        <li><a href="#arch-i18n">i18n</a></li>
+      </ol>
+    </li>
+    <li><a href="#modules"><span class="lang-inline lang-de">Bereiche</span><span class="lang-inline lang-en">Areas</span></a>
+      <ol>
+        <li><a href="#mod-auth"><span class="lang-inline lang-de">Konten</span><span class="lang-inline lang-en">Accounts</span></a></li>
+        <li><a href="#mod-albums"><span class="lang-inline lang-de">Alben</span><span class="lang-inline lang-en">Albums</span></a></li>
+        <li><a href="#mod-curate"><span class="lang-inline lang-de">Hochladen und Einsortieren</span><span class="lang-inline lang-en">Upload and filing</span></a></li>
+        <li><a href="#mod-share"><span class="lang-inline lang-de">Teilen und Beisteuern</span><span class="lang-inline lang-en">Sharing and contributing</span></a></li>
+        <li><a href="#mod-photoedit"><span class="lang-inline lang-de">Foto-Editor</span><span class="lang-inline lang-en">Photo editor</span></a></li>
+        <li><a href="#mod-notify"><span class="lang-inline lang-de">Benachrichtigungen</span><span class="lang-inline lang-en">Notifications</span></a></li>
+        <li><a href="#mod-companion">Companion</a></li>
+        <li><a href="#mod-settings"><span class="lang-inline lang-de">Einstellungen, Lizenz</span><span class="lang-inline lang-en">Settings, license</span></a></li>
+        <li><a href="#mod-memories">Memories</a></li>
+      </ol>
+    </li>
+    <li><a href="#datamodel"><span class="lang-inline lang-de">Datenmodell</span><span class="lang-inline lang-en">Data model</span></a></li>
+    <li><a href="#operations"><span class="lang-inline lang-de">Betrieb</span><span class="lang-inline lang-en">Operations</span></a></li>
+    <li><a href="#extending"><span class="lang-inline lang-de">Erweitern</span><span class="lang-inline lang-en">Extending</span></a></li>
+  </ol>
+</aside>
+
+<main>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 1. GRUNDSÄTZE                                                            -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<section id="cover" class="hero">
+  <p class="hero-tag"><span class="lang-inline lang-de">My Photo Diary · Entwickler-Handbuch · 3.0</span><span class="lang-inline lang-en">My Photo Diary · Developer handbook · 3.0</span></p>
+
+  <div class="lang-block lang-de">
+    <h1>Ein Foto-Tagebuch auf der eigenen NAS — <em>und wie es gebaut ist</em>.</h1>
+    <p class="lede">Dieses Handbuch beschreibt MPD aus Entwicklersicht: Architektur, Bereiche, Datenmodell und Betrieb. Es folgt dem Code, nicht dem Prospekt.</p>
+    <p>MPD macht aus Foto-Ordnern Tagebücher — Fotos, Texte, Karten, Touren, Ton und Dokumente in einer Reihenfolge, die ein Mensch festlegt. Es läuft in einem Docker-Container auf einer Synology-NAS oder jedem Linux-Rechner mit Docker. Python/FastAPI im Backend, reines HTML/CSS/JavaScript im Frontend, kein Build-Schritt.</p>
+    <p>MPD gibt es als quelloffenen <strong>Kern</strong> (AGPL-3.0) und mit den Modulen <strong>MPD Plus</strong> (Suche, Stats, Tours, Trails). Dieses Handbuch beschreibt den Kern; wo ein Plus-Modul ins Spiel kommt, steht es dabei.</p>
+  </div>
+  <div class="lang-block lang-en">
+    <h1>A photo diary on your own NAS — <em>and how it is built</em>.</h1>
+    <p class="lede">This handbook describes MPD from a developer's angle: architecture, areas, data model and operations. It follows the code, not the brochure.</p>
+    <p>MPD turns photo folders into diaries — photos, text, maps, tours, audio and documents in an order a person chooses. It runs in one Docker container on a Synology NAS or any Linux machine with Docker. Python/FastAPI in the backend, plain HTML/CSS/JavaScript in the frontend, no build step.</p>
+    <p>MPD comes as an open-source <strong>core</strong> (AGPL-3.0) and with the <strong>MPD Plus</strong> modules (search, stats, tours, trails). This handbook describes the core; where a Plus module comes into play, it says so.</p>
+  </div>
+
+  <div class="hero-meta">
+    <span><strong>Stack:</strong> Python 3.11 · FastAPI · Vanilla JS · SQLite · Docker</span>
+    <span><strong>Auth:</strong> Argon2id · <span class="lang-inline lang-de">30 Tage</span><span class="lang-inline lang-en">30 days</span></span>
+    <span><strong>Format:</strong> PDX 1.5 (album.json)</span>
+  </div>
+</section>
+
+<div class="lang-block lang-de">
+  <h2>Drei Versprechen, die alles bestimmen</h2>
+  <p>Wer sie kennt, versteht, warum manche Funktionen bewusst <em>fehlen</em>.</p>
+  <div class="cards">
+    <div class="card">
+      <p class="card-cat">stays yours</p>
+      <h4>Deine Fotos bleiben deine.</h4>
+      <p>Keine Cloud, kein Konto bei Dritten. Ein Album ist ein Ordner mit einer <code>album.json</code> im offenen PDX-Format. Wer MPD morgen löscht, behält Fotos und lesbare Alben.</p>
+    </div>
+    <div class="card">
+      <p class="card-cat">share by giving</p>
+      <h4>Teilen heißt geben.</h4>
+      <p>Zwei Wege, beide ohne Feed: ein Freigabelink vom Server (Empfänger sehen ein Album zum Ansehen — keine Likes, keine Kommentare, kein Zähler) und das gewöhnliche Weitergeben aus der App über das Android-Teilen-Menü.</p>
+    </div>
+    <div class="card">
+      <p class="card-cat">locked = mine</p>
+      <h4>Privates bleibt privat.</h4>
+      <p><code>locked</code>-Elemente filtert der Server beim Teilen heraus, bevor etwas das Haus verlässt — im JSON wie in den Bild-Endpunkten.</p>
+    </div>
+  </div>
+  <h3>Das Overlay-Prinzip</h3>
+  <p>MPD <em>legt sich über</em> die Foto-Ordner. Es schreibt eine <code>album.json</code> und kleine Zwischenspeicher mit führendem Punkt daneben; die Originale bleiben unberührt. Genau eine Stelle weicht davon ab: der <strong>Foto-Editor</strong> schreibt Pixel zurück — mit einer Sicherungskette aus fünf Ständen (<code>.bak</code> … <code>.bak4</code>).</p>
+</div>
+<div class="lang-block lang-en">
+  <h2>Three promises that shape everything</h2>
+  <p>Knowing them explains why some features are <em>missing</em> on purpose.</p>
+  <div class="cards">
+    <div class="card">
+      <p class="card-cat">stays yours</p>
+      <h4>Your photos stay yours.</h4>
+      <p>No cloud, no third-party account. An album is a folder with an <code>album.json</code> in the open PDX format. Delete MPD tomorrow and you keep your photos and readable albums.</p>
+    </div>
+    <div class="card">
+      <p class="card-cat">share by giving</p>
+      <h4>Sharing means giving.</h4>
+      <p>Two ways, neither of them a feed: a share link from the server (recipients see an album to look at — no likes, no comments, no counter) and plain handing a photo to another app through Android's share sheet.</p>
+    </div>
+    <div class="card">
+      <p class="card-cat">locked = mine</p>
+      <h4>Private stays private.</h4>
+      <p>The server filters <code>locked</code> elements out of a share before anything leaves the house — in the JSON and in the image endpoints alike.</p>
+    </div>
+  </div>
+  <h3>The overlay principle</h3>
+  <p>MPD <em>lays itself over</em> the photo folders. It writes an <code>album.json</code> and small dot-prefixed caches next to them; the originals stay untouched. Exactly one place differs: the <strong>photo editor</strong> writes pixels back — with a backup chain of five versions (<code>.bak</code> … <code>.bak4</code>).</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 2. SCHNELLSTART                                                          -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="quickstart"><span class="lang-inline lang-de">2. Schnellstart</span><span class="lang-inline lang-en">2. Quick start</span></h2>
+
+<h3 id="qs-install"><span class="lang-inline lang-de">2.1 Installieren</span><span class="lang-inline lang-en">2.1 Install</span></h3>
+<div class="lang-block lang-de">
+  <p>Zwei Wege, dasselbe Image:</p>
+  <ul>
+    <li><strong>Synology-Paket</strong> (<code>.spk</code>, DSM 7, braucht den Container Manager): Paket-Zentrum → Manuelle Installation. Ein Assistent fragt Foto-Freigabe, Port und Konten ab. Daten liegen unter <code>/volume1/docker/MPD/data</code>.</li>
+    <li><strong>Docker Compose</strong> auf jedem Linux-Rechner: drei Ordner (<code>photos</code>, <code>homes</code>, <code>data</code>), eine <code>mpd.env</code>, dann <code>docker compose up -d --build</code>. Die README beschreibt die Schritte.</li>
+  </ul>
+  <p>MPD lauscht auf Port <strong>8089</strong>. Für den Zugriff von außen gehört es hinter einen Reverse Proxy (z. B. den von DSM) — und <code>MPD_BASE_URL</code> in die <code>mpd.env</code>, damit geteilte Links auf die richtige Adresse zeigen.</p>
+</div>
+<div class="lang-block lang-en">
+  <p>Two ways, the same image:</p>
+  <ul>
+    <li><strong>Synology package</strong> (<code>.spk</code>, DSM 7, needs Container Manager): Package Center → Manual Install. A wizard asks for the photo share, port and accounts. Data lives under <code>/volume1/docker/MPD/data</code>.</li>
+    <li><strong>Docker Compose</strong> on any Linux machine: three folders (<code>photos</code>, <code>homes</code>, <code>data</code>), an <code>mpd.env</code>, then <code>docker compose up -d --build</code>. The README lists the steps.</li>
+  </ul>
+  <p>MPD listens on port <strong>8089</strong>. For access from outside, put it behind a reverse proxy (e.g. DSM's) — and set <code>MPD_BASE_URL</code> in <code>mpd.env</code> so shared links point to the right address.</p>
+</div>
+
+<h3 id="qs-env"><span class="lang-inline lang-de">2.2 mpd.env</span><span class="lang-inline lang-en">2.2 mpd.env</span></h3>
+<div class="lang-block lang-de">
+  <p>Eine flache Datei, gelesen von <code>backend/config.py</code> beim Start — keine Umgebungsvariablen, kein <code>python-dotenv</code>. <strong>Ein Tippfehler im Schlüssel fällt nicht auf</strong>: dann gilt still die Vorgabe. Alle Schalter mit Vorgabe und Erklärung stehen in <code>mpd.env.example</code>; im Paket erzeugt der Container die Datei bei jedem Start neu, eigene Zeilen gehören nach <code>/data/mpd.env.local</code>.</p>
+  <p>Mehrere Einstellungen gibt es zusätzlich im Einstellungsdialog (Admin): SMTP, Formulierungshilfe, Teilen an/aus. Dort Gesetztes gewinnt, <code>mpd.env</code> ist der Rückfall.</p>
+</div>
+<div class="lang-block lang-en">
+  <p>One flat file, read by <code>backend/config.py</code> at start — no environment variables, no <code>python-dotenv</code>. <strong>A typo in a key goes unnoticed</strong>: the default silently applies. All options with defaults and explanations are in <code>mpd.env.example</code>; in the package the container regenerates the file on every start, your own lines go into <code>/data/mpd.env.local</code>.</p>
+  <p>Several settings also exist in the settings dialog (admin): SMTP, writing assistant, sharing on/off. What is set there wins; <code>mpd.env</code> is the fallback.</p>
+</div>
+<pre><code># Paths
+MPD_PHOTO_SHARED=/photos              # family collection
+MPD_HOMES_ROOT=/homes                 # personal spaces: &lt;root&gt;/&lt;user&gt;/Photos
+MPD_PERSONAL_SUBDIR=Photos
+MPD_STATE_DIR=/data/state             # log + search index
+
+# Links that leave the house (share, mail, QR)
+MPD_BASE_URL=https://mpd.example.org
+
+# Night jobs (container time zone, TZ)
+MPD_RETENTION_HOUR=3                  # clean-up 03:30
+MPD_KEEP_HOUR=2                       # rescue copy 02:30
+MPD_THUMB_SWEEP=0                     # 1 = really delete orphaned thumbnails
+
+# Optional
+MPD_DEMO=0                            # /demo-login only exists with 1 + MPD_DEMO_PASSWORD
+MPD_NOTIFY_PUBLISH_TOKEN=             # POST /api/notify/publish for NAS scripts
+MPD_LICENSE_ENFORCE=0                 # 1 = Plus modules need a license file</code></pre>
+
+<h3 id="qs-users"><span class="lang-inline lang-de">2.3 Konten und Rollen</span><span class="lang-inline lang-en">2.3 Accounts and roles</span></h3>
+<div class="lang-block lang-de">
+  <p>MPD hat eine <strong>eigene Anmeldung</strong>, unabhängig von den NAS-Konten. Das Paket legt die ersten Konten aus dem Assistenten an (mit Pflicht zum Passwortwechsel); bei Docker Compose legt man das erste Konto im Container an:</p>
+</div>
+<div class="lang-block lang-en">
+  <p>MPD has its <strong>own sign-in</strong>, independent of the NAS accounts. The package creates the first accounts from the wizard (with a forced password change); with Docker Compose you create the first account inside the container:</p>
+</div>
+<pre><code>docker compose exec mpd python scripts/manage_users.py add anna
+# Role [admin|editor|viewer]: admin
+# personal_path [/homes/anna/Photos]: &lt;enter&gt;
+# New password: ************</code></pre>
+<div class="lang-block lang-de">
+  <p>Passwörter nur über <code>getpass</code>, nie als Argument. Weitere Befehle: <code>list</code>, <code>set-password</code>, <code>set-role</code>, <code>set-path</code>, <code>set-display-name</code>, <code>set-must-change</code>, <code>set-modules</code>, <code>add-demo</code>, <code>delete</code>. Danach verwaltet der Admin Konten auch in der App (Menü → Benutzerverwaltung).</p>
+</div>
+<div class="lang-block lang-en">
+  <p>Passwords only through <code>getpass</code>, never as an argument. More commands: <code>list</code>, <code>set-password</code>, <code>set-role</code>, <code>set-path</code>, <code>set-display-name</code>, <code>set-must-change</code>, <code>set-modules</code>, <code>add-demo</code>, <code>delete</code>. After that the admin also manages accounts in the app (menu → user management).</p>
+</div>
+<table>
+  <thead><tr><th><span class="lang-inline lang-de">Rolle</span><span class="lang-inline lang-en">Role</span></th><th><span class="lang-inline lang-de">Familienbestand</span><span class="lang-inline lang-en">Family collection</span></th><th><span class="lang-inline lang-de">Eigener Bereich</span><span class="lang-inline lang-en">Own space</span></th><th><span class="lang-inline lang-de">Installation</span><span class="lang-inline lang-en">Instance</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>admin</code></td><td><span class="lang-inline lang-de">lesen · beitragen · kuratieren</span><span class="lang-inline lang-en">read · contribute · curate</span></td><td><span class="lang-inline lang-de">alles</span><span class="lang-inline lang-en">everything</span></td><td><span class="lang-inline lang-de">Konten, Einstellungen</span><span class="lang-inline lang-en">accounts, settings</span></td></tr>
+    <tr><td><code>editor</code></td><td><span class="lang-inline lang-de">lesen · beitragen</span><span class="lang-inline lang-en">read · contribute</span></td><td><span class="lang-inline lang-de">alles</span><span class="lang-inline lang-en">everything</span></td><td>—</td></tr>
+    <tr><td><code>viewer</code></td><td><span class="lang-inline lang-de">lesen</span><span class="lang-inline lang-en">read</span></td><td><span class="lang-inline lang-de">alles</span><span class="lang-inline lang-en">everything</span></td><td>—</td></tr>
+    <tr><td><span class="lang-inline lang-de">Demo</span><span class="lang-inline lang-en">demo</span></td><td>—</td><td><span class="lang-inline lang-de">nur lesen</span><span class="lang-inline lang-en">read only</span></td><td>—</td></tr>
+  </tbody>
+</table>
+<div class="lang-block lang-de">
+  <p><em>Beitragen</em> heißt hochladen, einsortieren und unreferenzierten Ausschuss löschen; <em>kuratieren</em> heißt Alben anlegen, gestalten, löschen. Der persönliche Bereich ist für alle anderen unsichtbar, auch für den Admin. Zwei Schalter je Konto in <code>users.json</code>: <code>may_share</code> (Teilen nach außen) und <code>modules</code> (Plus-Module).</p>
+</div>
+<div class="lang-block lang-en">
+  <p><em>Contribute</em> means upload, file and delete unreferenced leftovers; <em>curate</em> means create, design and delete albums. The personal space is invisible to everyone else, the admin included. Two per-account switches in <code>users.json</code>: <code>may_share</code> (sharing outside) and <code>modules</code> (Plus modules).</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 3. ARCHITEKTUR                                                           -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="architecture"><span class="lang-inline lang-de">3. Architektur</span><span class="lang-inline lang-en">3. Architecture</span></h2>
+
+<div class="lang-block lang-de">
+  <p class="lede">Eine FastAPI-App, eine Auth-Middleware vorn, Router dahinter, Fachlogik in <code>core/</code>. Kein ORM, keine Datenbank für Inhalte, kein Frontend-Build. Das ist Absicht: Fast alles lässt sich mit <code>ls</code>, <code>cat</code> und einem Texteditor nachvollziehen.</p>
+</div>
+<div class="lang-block lang-en">
+  <p class="lede">One FastAPI app, one auth middleware in front, routers behind it, business logic in <code>core/</code>. No ORM, no database for content, no frontend build. On purpose: almost everything can be followed with <code>ls</code>, <code>cat</code> and a text editor.</p>
+</div>
+
+<h3 id="arch-lifecycle"><span class="lang-inline lang-de">3.1 Ein Request</span><span class="lang-inline lang-en">3.1 A request</span></h3>
+<div class="diagram">
+<svg viewBox="0 0 760 280" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,sans-serif" font-size="13">
+  <!-- Browser -->
+  <rect x="20" y="40" width="120" height="60" rx="4" fill="rgba(46,117,182,0.12)" stroke="#5B9BD5" stroke-width="1.5"/>
+  <text x="80" y="65" text-anchor="middle" fill="#fff">Browser</text>
+  <text x="80" y="84" text-anchor="middle" fill="#cfc8b8" font-size="11">cookie + fetch</text>
+  <!-- Arrow 1 -->
+  <line x1="140" y1="70" x2="195" y2="70" stroke="#7F8C8D" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- AuthMiddleware -->
+  <rect x="200" y="40" width="160" height="60" rx="4" fill="rgba(200,146,42,0.12)" stroke="#c8922a" stroke-width="1.5"/>
+  <text x="280" y="60" text-anchor="middle" fill="#fff">AuthMiddleware</text>
+  <text x="280" y="78" text-anchor="middle" fill="#cfc8b8" font-size="11">main.py</text>
+  <text x="280" y="92" text-anchor="middle" fill="#c8922a" font-size="11">_PUBLIC_PATHS · cookie · token</text>
+  <!-- Arrow 2 -->
+  <line x1="360" y1="70" x2="415" y2="70" stroke="#7F8C8D" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Router -->
+  <rect x="420" y="40" width="160" height="60" rx="4" fill="rgba(91,155,213,0.12)" stroke="#5B9BD5" stroke-width="1.5"/>
+  <text x="500" y="60" text-anchor="middle" fill="#fff">Router</text>
+  <text x="500" y="78" text-anchor="middle" fill="#cfc8b8" font-size="11">routers/*.py</text>
+  <text x="500" y="92" text-anchor="middle" fill="#5B9BD5" font-size="11">require_session()</text>
+  <!-- Arrow 3 -->
+  <line x1="580" y1="70" x2="635" y2="70" stroke="#7F8C8D" stroke-width="1.5" marker-end="url(#arr)"/>
+  <!-- Response -->
+  <rect x="640" y="40" width="100" height="60" rx="4" fill="rgba(192,57,43,0.10)" stroke="#C0392B" stroke-width="1.5"/>
+  <text x="690" y="65" text-anchor="middle" fill="#fff">Response</text>
+  <text x="690" y="84" text-anchor="middle" fill="#cfc8b8" font-size="11">JSON / file</text>
+
+  <!-- Layer below: helpers -->
+  <line x1="280" y1="100" x2="280" y2="155" stroke="#7F8C8D" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="500" y1="100" x2="500" y2="155" stroke="#7F8C8D" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="180" y="160" width="200" height="80" rx="4" fill="rgba(13,17,23,0.6)" stroke="rgba(91,155,213,0.25)" stroke-width="1"/>
+  <text x="280" y="180" text-anchor="middle" fill="#c8922a" font-size="11" letter-spacing="0.1em">CHECK · MIDDLEWARE</text>
+  <text x="280" y="200" text-anchor="middle" fill="#cfc8b8" font-size="12">sessiondb.get(token)</text>
+  <text x="280" y="218" text-anchor="middle" fill="#cfc8b8" font-size="12">ratelimit.check(ip)</text>
+  <text x="280" y="234" text-anchor="middle" fill="#cfc8b8" font-size="12">i18n.t(key, request)</text>
+  <rect x="400" y="160" width="200" height="80" rx="4" fill="rgba(13,17,23,0.6)" stroke="rgba(91,155,213,0.25)" stroke-width="1"/>
+  <text x="500" y="180" text-anchor="middle" fill="#c8922a" font-size="11" letter-spacing="0.1em">DATA · ROUTER</text>
+  <text x="500" y="200" text-anchor="middle" fill="#cfc8b8" font-size="12">FilesystemPhotosAPI</text>
+  <text x="500" y="218" text-anchor="middle" fill="#cfc8b8" font-size="12">album.json (atomic write)</text>
+  <text x="500" y="234" text-anchor="middle" fill="#cfc8b8" font-size="12">thumb_pipeline · shares</text>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L7,4 L0,8 z" fill="#7F8C8D"/>
+    </marker>
+  </defs>
+</svg>
+<p class="diagram-caption"><span class="lang-inline lang-de">Jeder Request läuft erst durch die Auth-Middleware (Public-Pfade durchgewinkt, alles andere session-pflichtig), dann zum passenden Router. Side-helpers wie i18n, ratelimit, sessiondb werden aus beiden Schichten gerufen.</span><span class="lang-inline lang-en">Every request hits the auth middleware first (public paths waved through, everything else session-gated), then routes to the matching router. Side helpers like i18n, ratelimit, sessiondb are called from both layers.</span></p>
+</div>
+<div class="lang-block lang-de">
+  <ul>
+    <li><strong>Öffentlich</strong> sind nur die Pfade in <code>_PUBLIC_PATHS</code> und <code>_PUBLIC_PREFIXES</code> in <code>main.py</code> — Anmeldung, statische Dateien, <code>/share/…</code> und <code>/contrib/…</code> (beide ratenbegrenzt), <code>/api/version</code>. Jeder Eintrag dort ist eine Sicherheitsentscheidung.</li>
+    <li><strong>Alles andere</strong> braucht eine gültige Sitzung (Cookie oder Bearer-Token). Demo-Sitzungen dürfen nur <code>GET</code>/<code>HEAD</code>; ist <code>must_change_password</code> gesetzt, bleibt nur der Passwortwechsel offen.</li>
+    <li>Im Router prüfen <code>require_session()</code> und die Funktionen aus <code>routers/deps.py</code> — <strong>die eine Datei mit dem ganzen Rechtemodell</strong>. Pfade entstehen ausschließlich über <code>get_path()</code>/<code>get_api()</code>, nie durch Zusammensetzen.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><strong>Public</strong> are only the paths in <code>_PUBLIC_PATHS</code> and <code>_PUBLIC_PREFIXES</code> in <code>main.py</code> — sign-in, static files, <code>/share/…</code> and <code>/contrib/…</code> (both rate-limited), <code>/api/version</code>. Every entry there is a security decision.</li>
+    <li><strong>Everything else</strong> needs a valid session (cookie or bearer token). Demo sessions may only <code>GET</code>/<code>HEAD</code>; with <code>must_change_password</code> set, only the password change stays open.</li>
+    <li>In the router, <code>require_session()</code> and the functions in <code>routers/deps.py</code> check — <strong>the one file holding the whole permission model</strong>. Paths come only from <code>get_path()</code>/<code>get_api()</code>, never from string joins.</li>
+  </ul>
+</div>
+
+<h3 id="arch-auth"><span class="lang-inline lang-de">3.2 Anmeldung</span><span class="lang-inline lang-en">3.2 Sign-in</span></h3>
+<div class="lang-block lang-de">
+  <ul>
+    <li><strong>Passwörter:</strong> Argon2id (64 MiB, 3 Durchläufe, 4 Lanes) in <code>users.json</code>, Datei mit <code>0600</code>, atomar geschrieben. Auch bei unbekanntem Konto wird ein Dummy-Hash geprüft — die Antwortzeit verrät nicht, ob es das Konto gibt.</li>
+    <li><strong>Sitzungen:</strong> Token = <code>uuid4().hex</code>; in <code>mpd.sqlite</code> steht nur sein SHA-256. Cookie <code>mpd_session</code>: <code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> unter HTTPS, 30 Tage. Sitzungen überleben einen Neustart.</li>
+    <li><strong>Native App:</strong> <code>POST /api/login</code> mit <code>"want_token": true</code> liefert denselben Token zusätzlich im JSON; die App schickt ihn als <code>Authorization: Bearer …</code>. Bearer hat Vorrang vor dem Cookie.</li>
+    <li><strong>Sperre:</strong> 5 Fehlversuche in 5 Minuten → 60 Sekunden gesperrt, je IP (<code>core/ratelimit.py</code>). Dieselbe Regel schützt <code>/share/</code> und <code>/contrib/</code> vor dem Durchprobieren von Tokens.</li>
+    <li><strong>Demo:</strong> <code>/demo-login</code> gibt es nur mit <code>MPD_DEMO=1</code> und gesetztem <code>MPD_DEMO_PASSWORD</code>; sonst 404. Der Schalter in den Einstellungen kann es nur abschalten — <em>eine Einstellung, die man umlegen kann, darf keine Sicherheitszusage sein.</em></li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><strong>Passwords:</strong> Argon2id (64 MiB, 3 iterations, 4 lanes) in <code>users.json</code>, file mode <code>0600</code>, written atomically. Unknown accounts still verify a dummy hash — response time does not reveal whether an account exists.</li>
+    <li><strong>Sessions:</strong> token = <code>uuid4().hex</code>; <code>mpd.sqlite</code> holds only its SHA-256. Cookie <code>mpd_session</code>: <code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> under HTTPS, 30 days. Sessions survive a restart.</li>
+    <li><strong>Native app:</strong> <code>POST /api/login</code> with <code>"want_token": true</code> also returns the token in the JSON; the app sends it as <code>Authorization: Bearer …</code>. Bearer wins over the cookie.</li>
+    <li><strong>Lockout:</strong> 5 failures in 5 minutes → 60 seconds locked, per IP (<code>core/ratelimit.py</code>). The same rule protects <code>/share/</code> and <code>/contrib/</code> against token guessing.</li>
+    <li><strong>Demo:</strong> <code>/demo-login</code> only exists with <code>MPD_DEMO=1</code> and <code>MPD_DEMO_PASSWORD</code> set; otherwise 404. The switch in the settings can only turn it off — <em>a setting you can flip must never be a security promise.</em></li>
+  </ul>
+</div>
+
+<h3 id="arch-thumbs"><span class="lang-inline lang-de">3.3 Vorschaubilder</span><span class="lang-inline lang-en">3.3 Thumbnails</span></h3>
+<table>
+  <thead><tr><th>Name</th><th><span class="lang-inline lang-de">längere Kante</span><span class="lang-inline lang-en">long edge</span></th><th><span class="lang-inline lang-de">Qualität</span><span class="lang-inline lang-en">quality</span></th><th>API</th><th><span class="lang-inline lang-de">wofür</span><span class="lang-inline lang-en">for</span></th></tr></thead>
+  <tbody>
+    <tr><td><code>thumb</code></td><td>400</td><td>80</td><td><code>sm</code></td><td><span class="lang-inline lang-de">Raster</span><span class="lang-inline lang-en">grid</span></td></tr>
+    <tr><td><code>cover</code></td><td>900</td><td>80</td><td><code>m</code></td><td><span class="lang-inline lang-de">Album, Titelbild</span><span class="lang-inline lang-en">album, cover</span></td></tr>
+    <tr><td><code>preview</code></td><td>2048</td><td>82</td><td><code>xl</code></td><td>Lightbox</td></tr>
+    <tr><td><code>full</code></td><td>4096</td><td>85</td><td><code>full</code></td><td><span class="lang-inline lang-de">Zoom</span><span class="lang-inline lang-en">zoom</span></td></tr>
+  </tbody>
+</table>
+<div class="lang-block lang-de">
+  <ul>
+    <li><code>core/thumb_pipeline.py</code>, WebP, <code>Image.thumbnail()</code> — vergrößert nie. <code>Image.draft()</code> vor dem Verkleinern verhindert, dass ein 200-MP-Panorama voll dekodiert wird.</li>
+    <li><strong>Cache-Schlüssel</strong> <code>sha1(absoluter Pfad + mtime_ns)</code>, abgelegt unter <code>/data/thumb-cache/{größe}/{key[:2]}/{key}.webp</code>. Ändert sich die mtime (Foto-Editor), entsteht ein neuer Schlüssel — veraltete Bilder werden nie ausgeliefert. Derselbe Wert ist der <code>ETag</code> der Endpunkte; URLs tragen ihn als <code>?v=</code> und sind dann ein Jahr <code>immutable</code>.</li>
+    <li><strong>Vorwärmen:</strong> <code>core/library_warmer.py</code> läuft bei jedem Start über alle Alben (Threads: <code>MPD_WARMER_THREADS</code>, Vorgabe 3). Liegt alles im Cache, ist er in Sekunden durch.</li>
+    <li><strong>Aufräumen:</strong> <code>sweep_thumb_cache()</code> in <code>core/retention.py</code> kehrt nachts Einträge, deren Foto nicht mehr existiert — gegen die Menge gültiger Schlüssel, nicht nach Alter. Vorgabe ist ein Trockenlauf, <code>MPD_THUMB_SWEEP=1</code> löscht. Drei Riegel: fehlt ein Bestand auf der Platte oder ist die Schlüsselmenge leer, wird nicht gekehrt; frisch Geschriebenes hat 7 Tage Schonfrist.</li>
+    <li><strong>Falle:</strong> <code>core/filesystem_photos.py</code> hat einen zweiten, älteren Satz (JPEG, <code>sm/m/xl</code> = 200/400/1200) unter <code>thumb-cache/fs/</code>. Gleiche Kurznamen, andere Werte.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><code>core/thumb_pipeline.py</code>, WebP, <code>Image.thumbnail()</code> — never upscales. <code>Image.draft()</code> before shrinking keeps a 200 MP panorama from being fully decoded.</li>
+    <li><strong>Cache key</strong> <code>sha1(absolute path + mtime_ns)</code>, stored at <code>/data/thumb-cache/{size}/{key[:2]}/{key}.webp</code>. When the mtime changes (photo editor), a new key results — stale images are never served. The same value is the endpoints' <code>ETag</code>; URLs carry it as <code>?v=</code> and are then <code>immutable</code> for a year.</li>
+    <li><strong>Warming:</strong> <code>core/library_warmer.py</code> runs over all albums on every start (threads: <code>MPD_WARMER_THREADS</code>, default 3). With a full cache it finishes in seconds.</li>
+    <li><strong>Clean-up:</strong> <code>sweep_thumb_cache()</code> in <code>core/retention.py</code> removes entries whose photo no longer exists — against the set of valid keys, not by age. Default is a dry run; <code>MPD_THUMB_SWEEP=1</code> deletes. Three latches: if a collection is missing on disk or the key set is empty, nothing is swept; fresh files get 7 days of grace.</li>
+    <li><strong>Trap:</strong> <code>core/filesystem_photos.py</code> has a second, older set (JPEG, <code>sm/m/xl</code> = 200/400/1200) under <code>thumb-cache/fs/</code>. Same short names, different values.</li>
+  </ul>
+</div>
+
+<h3 id="arch-core"><span class="lang-inline lang-de">3.4 Kern und Module</span><span class="lang-inline lang-en">3.4 Core and modules</span></h3>
+<div class="lang-block lang-de">
+  <p>Der Kern <strong>importiert kein Plus-Modul</strong> und läuft ohne jede Plus-Datei. Drei Mechanismen halten das zusammen:</p>
+  <ul>
+    <li><strong>Router optional:</strong> <code>main.py</code> lädt <code>routers/{memories,stats,search,tours,trails}.py</code> mit <code>ImportError</code>-Schutz. Fehlt eine Datei, fehlt nur ihr Endpunkt; das Log sagt <em>„Modul … nicht mitgeliefert“</em>.</li>
+    <li><strong>Ereignisse statt Aufrufe:</strong> <code>core/events.py</code>. Der Kern meldet <code>album_changed</code> und <code>photo_meta_changed</code>; ein Modul hängt sich beim eigenen Import mit <code>subscribe()</code> ein. Handler laufen synchron, ein Fehler wird geloggt, nie geworfen — ein kaputtes Modul lässt keinen Album-Save scheitern.</li>
+    <li><strong>Nachtjobs im Kern:</strong> <code>core/scheduler.py</code> ist die eine APScheduler-Instanz. Module hängen ihre Jobs mit <code>add_job()</code> an.</li>
+  </ul>
+  <p>Ob ein Konto ein Modul benutzen darf, entscheiden drei Schichten, die alle zustimmen müssen: <strong>installiert</strong> (<code>installed_modules()</code>), <strong>freigeschaltet</strong> (<code>modules</code> in <code>users.json</code>; fehlt das Feld: alle) und — nur bei <code>MPD_LICENSE_ENFORCE=1</code> — <strong>lizenziert</strong> (<code>core/license.py</code>). Das Web zeigt gesperrte Module mit Schloss und einer Erklärung; <code>/api/version</code> meldet <code>edition: "core"</code>, wenn kein Modul liegt.</p>
+</div>
+<div class="lang-block lang-en">
+  <p>The core <strong>imports no Plus module</strong> and runs without any Plus file. Three mechanisms keep it that way:</p>
+  <ul>
+    <li><strong>Optional routers:</strong> <code>main.py</code> loads <code>routers/{memories,stats,search,tours,trails}.py</code> guarded by <code>ImportError</code>. A missing file only removes its endpoints; the log says <em>“module … not shipped”</em>.</li>
+    <li><strong>Events instead of calls:</strong> <code>core/events.py</code>. The core emits <code>album_changed</code> and <code>photo_meta_changed</code>; a module subscribes on its own import with <code>subscribe()</code>. Handlers run synchronously; an error is logged, never raised — a broken module cannot fail an album save.</li>
+    <li><strong>Night jobs in the core:</strong> <code>core/scheduler.py</code> is the one APScheduler instance. Modules attach their jobs with <code>add_job()</code>.</li>
+  </ul>
+  <p>Whether an account may use a module is decided by three layers that must all agree: <strong>installed</strong> (<code>installed_modules()</code>), <strong>enabled</strong> (<code>modules</code> in <code>users.json</code>; missing field: all) and — only with <code>MPD_LICENSE_ENFORCE=1</code> — <strong>licensed</strong> (<code>core/license.py</code>). The web shows locked modules with a lock and an explanation; <code>/api/version</code> reports <code>edition: "core"</code> when no module is installed.</p>
+</div>
+
+<h3 id="arch-i18n">3.5 i18n</h3>
+<div class="lang-block lang-de">
+  <p>Frontend und Backend nutzen dasselbe Muster: ein flaches <code>LOCALES</code>-Dict je Sprache, Punkt-Schlüssel, einfache Platzhalter. Kein Build, keine Bibliothek.</p>
+  <ul>
+    <li><strong>Frontend</strong> <code>frontend/js/i18n.js</code>: <code>window.t(key, vars)</code> und <code>data-i18n</code>-Attribute. Sprache: <code>localStorage</code> → <code>?lang=</code> → <code>navigator.language</code>. <strong>Die Datei ersetzt <code>window.fetch</code></strong> und hängt jedem Request <code>Accept-Language</code> an — deshalb sieht ein Request im Netzwerk-Tab anders aus als im Code.</li>
+    <li><strong>Backend</strong> <code>backend/core/i18n.py</code>: <code>t(key, request, vars)</code> liest <code>Accept-Language</code>; ohne Request (Mail aus einem Nachtjob) <code>t_lang(key, lang, vars)</code>.</li>
+    <li><strong>Rückfall:</strong> gewünschte Sprache → Deutsch → der Schlüssel selbst. Wer im UI <code>album.foo</code> sieht, hat einen Schlüssel vergessen.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p>Frontend and backend use the same pattern: one flat <code>LOCALES</code> dict per language, dotted keys, simple placeholders. No build, no library.</p>
+  <ul>
+    <li><strong>Frontend</strong> <code>frontend/js/i18n.js</code>: <code>window.t(key, vars)</code> and <code>data-i18n</code> attributes. Language: <code>localStorage</code> → <code>?lang=</code> → <code>navigator.language</code>. <strong>The file replaces <code>window.fetch</code></strong> and adds <code>Accept-Language</code> to every request — which is why a request looks different in the network tab than in the code.</li>
+    <li><strong>Backend</strong> <code>backend/core/i18n.py</code>: <code>t(key, request, vars)</code> reads <code>Accept-Language</code>; without a request (mail from a night job) use <code>t_lang(key, lang, vars)</code>.</li>
+    <li><strong>Fallback:</strong> requested language → German → the key itself. If you see <code>album.foo</code> in the UI, a key is missing.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 4. BEREICHE                                                              -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="modules"><span class="lang-inline lang-de">4. Bereiche</span><span class="lang-inline lang-en">4. Areas</span></h2>
+<div class="lang-block lang-de">
+  <p class="lede">Je Bereich: was er tut, wo der Code liegt, welche Endpunkte er bedient. Die vollständige, laufend aktuelle Liste liefert FastAPI unter <code>/docs</code> (angemeldet).</p>
+</div>
+<div class="lang-block lang-en">
+  <p class="lede">Per area: what it does, where the code lives, which endpoints it serves. The complete, always current list is FastAPI's <code>/docs</code> (signed in).</p>
+</div>
+
+<h3 id="mod-auth"><span class="lang-inline lang-de">4.1 Konten</span><span class="lang-inline lang-en">4.1 Accounts</span></h3>
+<div class="lang-block lang-de">
+  <p><code>core/userdb.py</code> (Argon2id, <code>users.json</code> mit mtime-Cache — eine Änderung per CLI sieht der laufende Container sofort), <code>core/sessiondb.py</code>, <code>core/session.py</code>, <code>core/ratelimit.py</code>, <code>routers/users_admin.py</code>, <code>routers/deps.py</code>, <code>scripts/manage_users.py</code>.</p>
+</div>
+<div class="lang-block lang-en">
+  <p><code>core/userdb.py</code> (Argon2id, <code>users.json</code> with an mtime cache — a CLI change is visible to the running container at once), <code>core/sessiondb.py</code>, <code>core/session.py</code>, <code>core/ratelimit.py</code>, <code>routers/users_admin.py</code>, <code>routers/deps.py</code>, <code>scripts/manage_users.py</code>.</p>
+</div>
+<table class="endpoints">
+  <thead><tr><th>Method</th><th>Path</th><th><span class="lang-inline lang-de">Zweck</span><span class="lang-inline lang-en">Purpose</span></th></tr></thead>
+  <tbody>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/login</code></td><td><span class="lang-inline lang-de">Anmelden; <code>want_token</code> für die App</span><span class="lang-inline lang-en">sign in; <code>want_token</code> for the app</span></td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/logout</code></td><td><span class="lang-inline lang-de">Sitzung beenden</span><span class="lang-inline lang-en">end session</span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/whoami</code></td><td><span class="lang-inline lang-de">Konto, Rolle, <code>modules</code>, <code>rights</code>, Lizenz</span><span class="lang-inline lang-en">account, role, <code>modules</code>, <code>rights</code>, license</span></td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/account/change-password</code></td><td><span class="lang-inline lang-de">eigenes Passwort ändern (mind. 12 Zeichen)</span><span class="lang-inline lang-en">change own password (min. 12 chars)</span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/admin/users</code></td><td>admin</td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/admin/users</code></td><td><span class="lang-inline lang-de">admin: anlegen</span><span class="lang-inline lang-en">admin: create</span></td></tr>
+    <tr><td><span class="method m-patch">PATCH</span></td><td><code>/api/admin/users/{user}</code></td><td><span class="lang-inline lang-de">admin: Rolle, Name, Passwort (beendet dessen Sitzungen)</span><span class="lang-inline lang-en">admin: role, name, password (ends their sessions)</span></td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/admin/users/{user}</code></td><td>admin</td></tr>
+  </tbody>
+</table>
+<div class="lang-block lang-de">
+  <p><strong><code>rights</code></strong> in <code>/api/whoami</code> nennt je Bestand, was das Konto darf (<code>see</code>, <code>contribute</code>, <code>curate</code>, <code>edit</code>, <code>edit_unreferenced</code>, <code>share</code>, <code>contrib_link</code>) und für die Installation (<code>manage_users</code>, <code>settings</code>). Nur für die Oberfläche — durchgesetzt wird an jedem Endpunkt einzeln.</p>
+</div>
+<div class="lang-block lang-en">
+  <p><strong><code>rights</code></strong> in <code>/api/whoami</code> lists per collection what the account may do (<code>see</code>, <code>contribute</code>, <code>curate</code>, <code>edit</code>, <code>edit_unreferenced</code>, <code>share</code>, <code>contrib_link</code>) and for the instance (<code>manage_users</code>, <code>settings</code>). For the UI only — enforcement happens at every endpoint.</p>
+</div>
+
+<h3 id="mod-albums"><span class="lang-inline lang-de">4.2 Alben</span><span class="lang-inline lang-en">4.2 Albums</span></h3>
+<div class="lang-block lang-de">
+  <p><code>routers/albums.py</code> (Endpunkte, PDX-Prüfung, atomares Schreiben), <code>routers/album_files.py</code> (Dateien), <code>core/filesystem_photos.py</code>, <code>core/timeline_index.py</code>, <code>routers/timeline.py</code>.</p>
+  <ul>
+    <li><strong>Zwei Bestände:</strong> <code>shared</code> (Familie, <code>MPD_PHOTO_SHARED</code>) und <code>personal</code> (je Konto, <code>personal_path</code>).</li>
+    <li><strong>Schreiben:</strong> erst <code>create_backup()</code> nach <code>.mpd_backups/</code> (10 bleiben), dann <code>_write_atomic()</code> (tmp + <code>os.replace</code>). Eine halb geschriebene <code>album.json</code> ist nie zu sehen.</li>
+    <li><strong>Konfliktschutz</strong> (opt-in): Wer beim Speichern <code>X-MPD-Base-Modified</code> mitschickt, bekommt 409 statt eines stillen Überschreibens.</li>
+    <li><strong>Nachtragen beim Lesen:</strong> fehlende Auflösung und BlurHash werden beim Öffnen ergänzt (bis 200 je Aufruf); alte <code>style: "hidden"</code> wird zu <code>locked: true</code>.</li>
+    <li><strong>Zeitstrahl:</strong> alle Fotos eines Bestands chronologisch, auch unsortierte (<code>referenced: false</code>). Index im RAM je Bestand, 5 min TTL, an allen Schreibstellen entwertet. Filter <code>space</code>, <code>album</code>, <code>referenced</code>, <code>folder</code>, <code>date</code>.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p><code>routers/albums.py</code> (endpoints, PDX validation, atomic writes), <code>routers/album_files.py</code> (files), <code>core/filesystem_photos.py</code>, <code>core/timeline_index.py</code>, <code>routers/timeline.py</code>.</p>
+  <ul>
+    <li><strong>Two collections:</strong> <code>shared</code> (family, <code>MPD_PHOTO_SHARED</code>) and <code>personal</code> (per account, <code>personal_path</code>).</li>
+    <li><strong>Writing:</strong> first <code>create_backup()</code> into <code>.mpd_backups/</code> (10 kept), then <code>_write_atomic()</code> (tmp + <code>os.replace</code>). A half-written <code>album.json</code> can never be observed.</li>
+    <li><strong>Conflict guard</strong> (opt-in): send <code>X-MPD-Base-Modified</code> when saving and you get 409 instead of a silent overwrite.</li>
+    <li><strong>Filled in on read:</strong> missing resolution and BlurHash are added on open (up to 200 per call); old <code>style: "hidden"</code> becomes <code>locked: true</code>.</li>
+    <li><strong>Timeline:</strong> all photos of a collection in date order, unsorted ones included (<code>referenced: false</code>). In-RAM index per collection, 5 min TTL, invalidated at every write. Filters <code>space</code>, <code>album</code>, <code>referenced</code>, <code>folder</code>, <code>date</code>.</li>
+  </ul>
+</div>
+<table class="endpoints">
+  <thead><tr><th>Method</th><th>Path</th><th><span class="lang-inline lang-de">Zweck</span><span class="lang-inline lang-en">Purpose</span></th></tr></thead>
+  <tbody>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/albums</code></td><td><span class="lang-inline lang-de">alle sichtbaren Alben (30 s Cache)</span><span class="lang-inline lang-en">all visible albums (30 s cache)</span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/albums/without-json</code></td><td><span class="lang-inline lang-de">Ordner, die ein Album werden können</span><span class="lang-inline lang-en">folders that could become an album</span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/album/{space}/{name}</code></td><td><span class="lang-inline lang-de">album.json samt Medien-URLs</span><span class="lang-inline lang-en">album.json with media URLs</span></td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/album/create</code>, <code>/create-empty</code></td><td><span class="lang-inline lang-de">aus Ordner bzw. leer anlegen</span><span class="lang-inline lang-en">create from folder / empty</span></td></tr>
+    <tr><td><span class="method m-post">POST</span></td><td><code>/api/album/{space}/{name}/update</code></td><td><span class="lang-inline lang-de">ganze album.json speichern</span><span class="lang-inline lang-en">save the whole album.json</span></td></tr>
+    <tr><td><span class="method m-delete">DELETE</span></td><td><code>/api/album/{space}/{name}</code></td><td><span class="lang-inline lang-de">nur die album.json — Fotos bleiben; <code>/undo-delete</code></span><span class="lang-inline lang-en">only the album.json — photos stay; <code>/undo-delete</code></span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/album/{space}/{name}/backups</code></td><td><span class="lang-inline lang-de">Sicherungen; <code>POST …/restore</code></span><span class="lang-inline lang-en">backups; <code>POST …/restore</code></span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/timeline</code></td><td><span class="lang-inline lang-de">Zeitstrahl, Cursor-Paging</span><span class="lang-inline lang-en">timeline, cursor paging</span></td></tr>
+    <tr><td><span class="method m-get">GET</span></td><td><code>/api/thumbnail/…</code>, <code>/api/photo/…/download</code>, <code>/api/video/…</code>, <code>/api/audio/…</code>, <code>/api/document/…</code>, <code>/api/gpx/…</code></td><td><span class="lang-inline lang-de">Medien (<code>routers/media.py</code>), Range/206 für Video, Ton, Download</span><span class="lang-inline lang-en">media (<code>routers/media.py</code>), range/206 for video, audio, download</span></td></tr>
+  </tbody>
+</table>
+
+<h3 id="mod-curate"><span class="lang-inline lang-de">4.3 Hochladen und Einsortieren</span><span class="lang-inline lang-en">4.3 Upload and filing</span></h3>
+<div class="lang-block lang-de">
+  <p>Das Kuratier-Modell: Neues landet im <strong>Durchlauf</strong> — einem Ordner mit nackter Jahreszahl (<code>2026</code>). Ein Album ist Jahreszahl + Name (<code>2026 - Toskana</code>). Durchlauf-Ordner sind nie Album-Kandidaten. Einsortieren <em>verschiebt</em> die Datei ins Album; jede Datei wohnt in genau einem Ordner, weitere Auftritte laufen über <code>source_album</code>.</p>
+  <ul>
+    <li><code>PUT …/file/{filename}</code> — Hochladen, roher Body (die App, Kamera). Nur Foto/Video, max. 2 GB, atomar.</li>
+    <li><code>POST …/import-file</code> — einsortieren, auch quer über Bestände. Gleiche Bytes = Dublette (Quelle in den Papierkorb), anderer Inhalt = neuer Name <code>_1</code>.</li>
+    <li><code>POST /api/album/{space}/year-album</code> — „Rest ins Jahresalbum“: alles aus <code>2026</code> nach <code>2026 - das Jahr</code>.</li>
+    <li><code>DELETE …/file</code> — löscht in den <code>#recycle</code>-Ordner der Freigabe, wenn es einen gibt (bis zwei Ebenen über dem Bestand, bewusst nicht weiter); <code>recycled</code> in der Antwort sagt, was geschah. Aus einem Albumordner nur mit <code>album_context: true</code>; verweist ein anderes Album per <code>source_album</code> darauf: 409.</li>
+    <li><code>GET …/unassigned-photos</code> — Dateien im Albumordner ohne Element, dazu <code>skipped</code>: was MPD nicht anzeigen kann, nach Endung.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p>The curation model: new material lands in the <strong>inbox</strong> ("Durchlauf") — a folder named by a bare year (<code>2026</code>). An album is year + name (<code>2026 - Tuscany</code>). Inbox folders never become album candidates. Filing <em>moves</em> the file into the album; every file lives in exactly one folder, further appearances use <code>source_album</code>.</p>
+  <ul>
+    <li><code>PUT …/file/{filename}</code> — upload, raw body (the app, camera). Photo/video only, max. 2 GB, atomic.</li>
+    <li><code>POST …/import-file</code> — file into an album, also across collections. Identical bytes = duplicate (source goes to the recycle bin), different content = new name <code>_1</code>.</li>
+    <li><code>POST /api/album/{space}/year-album</code> — "rest into the year album": everything from <code>2026</code> into <code>2026 - das Jahr</code>.</li>
+    <li><code>DELETE …/file</code> — moves into the share's <code>#recycle</code> folder when there is one (up to two levels above the collection, deliberately no further); <code>recycled</code> in the response says what happened. From an album folder only with <code>album_context: true</code>; if another album references the file via <code>source_album</code>: 409.</li>
+    <li><code>GET …/unassigned-photos</code> — files in the album folder without an element, plus <code>skipped</code>: what MPD cannot show, by extension.</li>
+  </ul>
+</div>
+
+<h3 id="mod-share"><span class="lang-inline lang-de">4.4 Teilen und Beisteuern</span><span class="lang-inline lang-en">4.4 Sharing and contributing</span></h3>
+<div class="lang-block lang-de">
+  <p><code>core/shares.py</code>, <code>routers/share.py</code>, <code>core/contacts.py</code>, <code>core/mailer.py</code>, <code>frontend/share.html</code>, <code>share-photo.html</code>, <code>contrib.html</code>.</p>
+  <ul>
+    <li><strong>Token:</strong> <code>secrets.token_urlsafe(32)</code>, im Klartext genau einmal an den Besitzer; die DB kennt nur SHA-256. Optional mit Ablauf (<code>expires_days</code>), widerrufbar.</li>
+    <li><strong>Album oder Einzelfoto</strong> (<code>file</code>). Die Gastansicht läuft komplett über <code>/share/{token}/…</code>: <code>show_locked</code> wird hart auf <code>false</code> gezwungen, gesperrte Elemente kommen nicht ins JSON, jeder Medien-Abruf prüft, ob die Datei im freigegebenen Album steht. <strong>Bewusst ohne <code>full</code> und ohne Original</strong> — außer beim Einzelfoto (Download).</li>
+    <li><strong><code>share.py</code> ist eine Parallelimplementierung</strong>, kein Wrapper: Was angemeldete Nutzer sehen, muss ein Gast getrennt bekommen.</li>
+    <li><strong>Mail:</strong> <code>POST /api/share/send-email</code> über den eigenen SMTP-Server; Sprache folgt dem Absender; beim Einzelfoto taucht der Albumtitel nirgends auf.</li>
+    <li><strong>Beisteuern:</strong> <code>/contrib/{token}</code> — Gäste laden <em>in einen Sammelordner</em> hoch, nie in ein Album (Ziel mit album.json → 400). Ablauf Pflicht, Obergrenze <code>max_files</code>, Dateiname vom Server (<code>beitrag-&lt;gast&gt;-&lt;zufall&gt;</code>). Anlegen darf, wer kuratiert.</li>
+    <li><strong>Schalter:</strong> <code>share_enabled</code> in den Einstellungen schaltet Teilen global ab, ohne Tokens anzufassen; <code>may_share: false</code> je Konto.</li>
+    <li><strong>Der andere Weg, ohne Server:</strong> Die App reicht Fotos über das Android-Teilen-Menü an andere Apps weiter (einzeln und mehrere) und nimmt umgekehrt Fotos von dort entgegen („Teilen mit MPD" — sie landen im Durchlauf). Das läuft an Freigabelinks vorbei und hinterlässt nichts auf dem Server.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p><code>core/shares.py</code>, <code>routers/share.py</code>, <code>core/contacts.py</code>, <code>core/mailer.py</code>, <code>frontend/share.html</code>, <code>share-photo.html</code>, <code>contrib.html</code>.</p>
+  <ul>
+    <li><strong>Token:</strong> <code>secrets.token_urlsafe(32)</code>, returned in plain text to the owner exactly once; the DB only knows SHA-256. Optional expiry (<code>expires_days</code>), revocable.</li>
+    <li><strong>Album or single photo</strong> (<code>file</code>). The guest view runs entirely through <code>/share/{token}/…</code>: <code>show_locked</code> is forced to <code>false</code>, locked elements never enter the JSON, every media request checks that the file belongs to the shared album. <strong>Deliberately without <code>full</code> and without the original</strong> — except for a single photo (download).</li>
+    <li><strong><code>share.py</code> is a parallel implementation</strong>, not a wrapper: whatever signed-in users see, a guest has to get separately.</li>
+    <li><strong>Mail:</strong> <code>POST /api/share/send-email</code> through your own SMTP server; language follows the sender; for a single photo the album title appears nowhere.</li>
+    <li><strong>Contribute:</strong> <code>/contrib/{token}</code> — guests upload <em>into a collection folder</em>, never into an album (target with album.json → 400). Expiry is mandatory, <code>max_files</code> caps it, the server names the file (<code>beitrag-&lt;guest&gt;-&lt;random&gt;</code>). Whoever curates may create such links.</li>
+    <li><strong>Switches:</strong> <code>share_enabled</code> in the settings turns sharing off globally without touching tokens; <code>may_share: false</code> per account.</li>
+    <li><strong>The other way, without the server:</strong> the app hands photos to other apps through Android's share sheet (single and multiple) and accepts photos from there ("share with MPD" — they land in the inbox). That bypasses share links and leaves nothing on the server.</li>
+  </ul>
+</div>
+
+<h3 id="mod-photoedit"><span class="lang-inline lang-de">4.5 Foto-Editor</span><span class="lang-inline lang-en">4.5 Photo editor</span></h3>
+<div class="lang-block lang-de">
+  <p><code>core/photo_edit.py</code>, <code>core/exif.py</code>, <code>routers/photo_edit.py</code>, <code>js/lightbox-editor.js</code>, <code>js/lightbox-exif.js</code>.</p>
+  <ul>
+    <li>Drehen, Spiegeln, Geraderücken, Zuschneiden, Helligkeit/Kontrast/Sättigung — alles in einem Pillow-Durchgang, ein Neu-Kodieren. Die EXIF-Ausrichtung wird in die Pixel übernommen und auf 1 gesetzt.</li>
+    <li><strong>Sicherungskette:</strong> vor jeder Änderung <code>&lt;foto&gt;.bak</code>, ältere rollen nach <code>.bak1</code> … <code>.bak4</code>. „Zurücksetzen“ holt <code>.bak</code> zurück.</li>
+    <li><strong>Formate:</strong> bearbeitbar sind jpg/jpeg/jfif/png/heic/gif/webp (<code>EDITABLE_EXTS</code>); TIFF und BMP werden angezeigt, nicht überschrieben. <code>editable_format</code> je Datei sagt es den Clients.</li>
+    <li><strong>Recht:</strong> <code>may_edit_photo()</code> — wer kuratiert, alles; wer beiträgt, nur Unreferenziertes.</li>
+    <li>EXIF-Datum und GPS schreiben, Umbenennen nach <code>JJJJ-MM-TT_HH-MM-SS</code> mit Vorschau. EXIF-Schreiben meldet <code>photo_meta_changed</code>, Umbenennen <code>album_changed</code>.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p><code>core/photo_edit.py</code>, <code>core/exif.py</code>, <code>routers/photo_edit.py</code>, <code>js/lightbox-editor.js</code>, <code>js/lightbox-exif.js</code>.</p>
+  <ul>
+    <li>Rotate, flip, straighten, crop, brightness/contrast/saturation — all in one Pillow pass, one re-encode. The EXIF orientation is baked into the pixels and set to 1.</li>
+    <li><strong>Backup chain:</strong> before every change <code>&lt;photo&gt;.bak</code>, older ones roll to <code>.bak1</code> … <code>.bak4</code>. "Reset" restores <code>.bak</code>.</li>
+    <li><strong>Formats:</strong> editable are jpg/jpeg/jfif/png/heic/gif/webp (<code>EDITABLE_EXTS</code>); TIFF and BMP are shown, not overwritten. <code>editable_format</code> per file tells the clients.</li>
+    <li><strong>Permission:</strong> <code>may_edit_photo()</code> — curators everything, contributors only unreferenced files.</li>
+    <li>Write EXIF date and GPS, rename to <code>YYYY-MM-DD_HH-MM-SS</code> with preview. Writing EXIF emits <code>photo_meta_changed</code>, renaming <code>album_changed</code>.</li>
+  </ul>
+</div>
+
+<h3 id="mod-notify"><span class="lang-inline lang-de">4.6 Benachrichtigungen</span><span class="lang-inline lang-en">4.6 Notifications</span></h3>
+<div class="lang-block lang-de">
+  <p><code>core/notifydb.py</code> (eigene SQLite <code>/data/mpd-notify.sqlite</code>, dazu ein lesbarer SQL-Dump, 30 Tage), <code>core/notify_jobs.py</code>, <code>routers/notify.py</code>. <strong>Geholt, nicht geschickt:</strong> Die App registriert ein Gerät und fragt <code>/api/notify/pull</code> ab (optional Long-Poll bis 25 s), bestätigt mit <code>/ack</code>. Kein Push-Dienst, kein Google. Eine spät erscheinende Meldung ist deshalb meist ein schlafendes Handy.</p>
+  <p>Erzeuger im Kern: Upload-Tagesmeldung (19:00, an alle außer dem Verursacher), Kuratier-Wochenbericht (sonntags 18:00, Admin und Editor). NAS-Skripte liefern mit <code>MPD_NOTIFY_PUBLISH_TOKEN</code> über <code>POST /api/notify/publish</code> ein (Typ <code>alert</code>, an die Admins).</p>
+</div>
+<div class="lang-block lang-en">
+  <p><code>core/notifydb.py</code> (its own SQLite <code>/data/mpd-notify.sqlite</code>, plus a readable SQL dump, 30 days), <code>core/notify_jobs.py</code>, <code>routers/notify.py</code>. <strong>Pulled, not pushed:</strong> the app registers a device and polls <code>/api/notify/pull</code> (optional long poll up to 25 s), confirming with <code>/ack</code>. No push service, no Google. A late notification is therefore usually a sleeping phone.</p>
+  <p>Producers in the core: daily upload digest (19:00, everyone except the uploader), weekly curation report (Sundays 18:00, admin and editor). NAS scripts deliver through <code>POST /api/notify/publish</code> with <code>MPD_NOTIFY_PUBLISH_TOKEN</code> (type <code>alert</code>, to the admins).</p>
+</div>
+
+<h3 id="mod-companion">4.7 Companion</h3>
+<div class="lang-block lang-de">
+  <p><code>routers/companion.py</code>, <code>js/companion.js</code>. Schlägt drei stilistische Varianten <em>eines</em> Textblocks vor — keine neuen Fakten, keine erfundenen Orte oder Gefühle; der System-Prompt steht in <code>_SYSTEM_PROMPT</code>. Anbieter <code>anthropic</code>, <code>groq</code>, <code>mistral</code> oder <code>gemini</code>, Schlüssel im Einstellungsdialog (Anthropic auch <code>ANTHROPIC_API_KEY</code>). Ohne Schlüssel aus; Demo gesperrt; 60 Aufrufe je Stunde und Konto. Fotos und GPS verlassen das Haus nie.</p>
+</div>
+<div class="lang-block lang-en">
+  <p><code>routers/companion.py</code>, <code>js/companion.js</code>. Suggests three stylistic variants of <em>one</em> text block — no new facts, no invented places or feelings; the system prompt is <code>_SYSTEM_PROMPT</code>. Providers <code>anthropic</code>, <code>groq</code>, <code>mistral</code> or <code>gemini</code>, key in the settings dialog (Anthropic also <code>ANTHROPIC_API_KEY</code>). Off without a key; blocked for demo; 60 calls per hour and account. Photos and GPS never leave the house.</p>
+</div>
+
+<h3 id="mod-settings"><span class="lang-inline lang-de">4.8 Einstellungen und Lizenz</span><span class="lang-inline lang-en">4.8 Settings and license</span></h3>
+<div class="lang-block lang-de">
+  <p><code>core/settings.py</code> — <code>/data/mpd-settings.json</code>, <code>0600</code>, atomar, mtime-Cache; unbekannte Schlüssel werden ignoriert, fehlende fallen auf <code>_DEFAULTS</code> zurück. Schalter: <code>share_enabled</code>, <code>demo_enabled</code>, <code>memories_push_enabled</code>; dazu Companion (<code>companion_provider</code>, <code>companion_api_key</code>) und SMTP (<code>smtp_*</code>, ein leeres Passwort beim Speichern heißt „unverändert“). Nur Admins lesen die sensiblen Werte, und nur maskiert.</p>
+  <p><code>core/license.py</code> — signierte Lizenzdatei, <strong>offline</strong> geprüft (RSA-2048, reine Standardbibliothek in <code>core/rsa_min.py</code>), kein Aktivierungsserver. Einspielen im Dialog „MPD Plus“ (<code>POST</code>/<code>DELETE /api/settings/license</code>). Wirkt nur mit <code>MPD_LICENSE_ENFORCE=1</code>.</p>
+  <p><code>/verbinden</code> zeigt die Serveradresse als QR-Code (<code>mpd://setup?url=…</code>) für die App, gezeichnet von <code>core/qr_min.py</code> ohne Internet.</p>
+</div>
+<div class="lang-block lang-en">
+  <p><code>core/settings.py</code> — <code>/data/mpd-settings.json</code>, <code>0600</code>, atomic, mtime cache; unknown keys are ignored, missing ones fall back to <code>_DEFAULTS</code>. Switches: <code>share_enabled</code>, <code>demo_enabled</code>, <code>memories_push_enabled</code>; plus companion (<code>companion_provider</code>, <code>companion_api_key</code>) and SMTP (<code>smtp_*</code>; an empty password on save means "unchanged"). Only admins read the sensitive values, and only masked.</p>
+  <p><code>core/license.py</code> — signed license file, checked <strong>offline</strong> (RSA-2048, standard library only in <code>core/rsa_min.py</code>), no activation server. Install it in the "MPD Plus" dialog (<code>POST</code>/<code>DELETE /api/settings/license</code>). Effective only with <code>MPD_LICENSE_ENFORCE=1</code>.</p>
+  <p><code>/verbinden</code> shows the server address as a QR code (<code>mpd://setup?url=…</code>) for the app, drawn by <code>core/qr_min.py</code> without internet.</p>
+</div>
+
+<h3 id="mod-memories">4.9 Memories</h3>
+<div class="lang-block lang-de">
+  <p><code>routers/memories.py</code>, <code>diary_memories/scanner.py</code> (Tagesabgleich über alle Alben), <code>diary_memories/scheduler.py</code> (hängt seine Jobs an <code>core/scheduler.py</code>), <code>core/geocoder.py</code> (Ortsname über Nominatim).</p>
+  <ul>
+    <li><strong>Kern, nicht Plus</strong> (seit 20.09.2026): „heute vor X Jahren" ist das, was ein Tagebuch von einer Galerie unterscheidet.</li>
+    <li><strong>Täglich 06:30</strong> (<code>MEMORIES_HOUR</code>): Der Job sucht Fotos mit passendem Tag und Monat über alle Jahre und schreibt eine Zeile in den Benachrichtigungs-Store; die App holt sie ab. Schalter <code>memories_push_enabled</code> in den Einstellungen.</li>
+    <li><strong>Die Auswahl je Jahr</strong> (<code>rank_photos</code>): Tagesabschnitte reihum, verschiedene Orte zuerst, Fotos ohne Uhrzeit zuletzt. Der Stichentscheid ist ein Würfel mit dem angezeigten Datum als Startwert — innerhalb eines Tages stabil, von Jahr zu Jahr verschieden.</li>
+    <li><strong>Quelle je Konto:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code> (Vorgabe) oder <code>personal</code>.</li>
+    <li>Der Tagesscan liegt 30 Minuten im Cache und wird beim Start und beim Tageswechsel vorgewärmt.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <p><code>routers/memories.py</code>, <code>diary_memories/scanner.py</code> (day match across all albums), <code>diary_memories/scheduler.py</code> (attaches its jobs to <code>core/scheduler.py</code>), <code>core/geocoder.py</code> (place name via Nominatim).</p>
+  <ul>
+    <li><strong>Core, not Plus</strong> (since 2026-09-20): "today, years ago" is what separates a diary from a gallery.</li>
+    <li><strong>Daily at 06:30</strong> (<code>MEMORIES_HOUR</code>): the job finds photos matching day and month across all years and writes one row into the notification store; the app fetches it. Switch <code>memories_push_enabled</code> in the settings.</li>
+    <li><strong>The per-year selection</strong> (<code>rank_photos</code>): time-of-day buckets in turn, new places first, photos without a time last. Ties are broken by a dice seeded with the displayed date — stable within a day, different from year to year.</li>
+    <li><strong>Source per account:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code> (default) or <code>personal</code>.</li>
+    <li>The daily scan is cached for 30 minutes and pre-warmed at start and at the change of day.</li>
+  </ul>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 5. DATENMODELL                                                           -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="datamodel"><span class="lang-inline lang-de">5. Datenmodell</span><span class="lang-inline lang-en">5. Data model</span></h2>
+
+<h3>5.1 PDX — album.json</h3>
+<div class="lang-block lang-de">
+  <p>Photo Diary Exchange, Version 1.5 (Spezifikation: <code>docs/specs/PDX_SPEC_v1_5.pdf</code>). Ein Album ist eine geordnete Liste von Elementen — eine Seitenfolge, kein Foto-Verzeichnis.</p>
+</div>
+<div class="lang-block lang-en">
+  <p>Photo Diary Exchange, version 1.5 (specification: <code>docs/specs/PDX_SPEC_v1_5.pdf</code>). An album is an ordered list of elements — a sequence of pages, not a photo listing.</p>
+</div>
+<pre><code>{
+  "version": "1.5",
+  "meta": { "title": "Tuscany 2019", "year": 2019, "thumbnail": "IMG_0042.jpg",
+            "created": "…", "modified": "…", "show_locked": false },
+  "elements": [
+    { "id": "0010", "type": "text",  "text": "We arrived at night…", "style": "heading" },
+    { "id": "0020", "type": "photo", "file": "IMG_0001.jpg",
+      "resolution": "4032x3024", "blurhash": "LEHV6n…", "locked": false },
+    { "id": "0030", "type": "photo", "file": "IMG_9999.jpg", "source_album": "2018 - Liguria" },
+    { "id": "0040", "type": "tour",  "file": "hike.gpx", "title": "Up the hill" },
+    { "id": "0050", "type": "link",  "url": "https://example.org", "title": "…" }
+  ]
+}</code></pre>
+<div class="lang-block lang-de">
+  <ul>
+    <li><strong>Elementtypen:</strong> <code>text</code>, <code>photo</code>, <code>video</code>, <code>separator</code>, <code>document</code> (PDF, Bild, <code>.txt</code>/<code>.md</code>), <code>audio</code>, <code>map</code>, <code>tour</code>, <code>link</code>. Unbekannte Typen werden toleriert und übersprungen — Vorwärtskompatibilität mit Absicht.</li>
+    <li><strong>Textstile:</strong> <code>default</code>, <code>info</code>, <code>quote</code> (mit <code>source</code>), <code>note</code>, <code>heading</code>; Markdown-light <code>*kursiv*</code>, <code>**fett**</code> — gespeichert als Rohtext.</li>
+    <li><strong>IDs</strong> genau vierstellig, eindeutig; Reihenfolge der Liste = Reihenfolge der Seite. <code>meta</code> braucht <code>title</code>, <code>year</code>, <code>thumbnail</code>, <code>created</code>, <code>modified</code>.</li>
+    <li><strong>Falle <code>ALLOWED</code></strong> in <code>update_album</code>: Die Weißliste der Felder je Typ. Fehlt ein Feld dort, verwirft der Server es beim Speichern stillschweigend.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><strong>Element types:</strong> <code>text</code>, <code>photo</code>, <code>video</code>, <code>separator</code>, <code>document</code> (PDF, image, <code>.txt</code>/<code>.md</code>), <code>audio</code>, <code>map</code>, <code>tour</code>, <code>link</code>. Unknown types are tolerated and skipped — forward compatibility on purpose.</li>
+    <li><strong>Text styles:</strong> <code>default</code>, <code>info</code>, <code>quote</code> (with <code>source</code>), <code>note</code>, <code>heading</code>; Markdown-light <code>*italic*</code>, <code>**bold**</code> — stored as raw text.</li>
+    <li><strong>IDs</strong> exactly four digits, unique; list order = page order. <code>meta</code> needs <code>title</code>, <code>year</code>, <code>thumbnail</code>, <code>created</code>, <code>modified</code>.</li>
+    <li><strong>Trap <code>ALLOWED</code></strong> in <code>update_album</code>: the whitelist of fields per type. A field missing there is silently dropped on save.</li>
+  </ul>
+</div>
+
+<h3>5.2 users.json</h3>
+<pre><code>{
+  "version": 1,
+  "users": {
+    "anna": {
+      "pw_hash": "$argon2id$v=19$m=65536,t=3,p=4$…",
+      "role": "admin",
+      "personal_path": "/homes/anna/Photos",
+      "is_demo": false,
+      "display_name": "Anna",            // optional
+      "modules": ["stats", "tours"],      // optional; missing = all
+      "memories_scope": "shared",         // shared | personal
+      "must_change_password": false,
+      "may_share": true
+    }
+  }
+}</code></pre>
+
+<h3><span class="lang-inline lang-de">5.3 Was wo liegt</span><span class="lang-inline lang-en">5.3 What lives where</span></h3>
+<table>
+  <thead><tr><th><span class="lang-inline lang-de">Ort</span><span class="lang-inline lang-en">Place</span></th><th><span class="lang-inline lang-de">Inhalt</span><span class="lang-inline lang-en">Contents</span></th><th><span class="lang-inline lang-de">Wenn verloren</span><span class="lang-inline lang-en">If lost</span></th></tr></thead>
+  <tbody>
+    <tr><td><span class="lang-inline lang-de">Foto-Ordner</span><span class="lang-inline lang-en">photo folders</span></td><td><span class="lang-inline lang-de">Fotos, <code>album.json</code>, <code>.mpd_backups/</code>, <code>.bak</code>-Kette</span><span class="lang-inline lang-en">photos, <code>album.json</code>, <code>.mpd_backups/</code>, <code>.bak</code> chain</span></td><td><strong><span class="lang-inline lang-de">unersetzlich</span><span class="lang-inline lang-en">irreplaceable</span></strong></td></tr>
+    <tr><td><code>/data/users.json</code></td><td><span class="lang-inline lang-de">Konten</span><span class="lang-inline lang-en">accounts</span></td><td><span class="lang-inline lang-de">unersetzlich (Rettungskopie)</span><span class="lang-inline lang-en">irreplaceable (rescue copy)</span></td></tr>
+    <tr><td><code>/data/mpd-settings.json</code>, <code>mpd.env.local</code></td><td><span class="lang-inline lang-de">Einstellungen, Schlüssel, SMTP</span><span class="lang-inline lang-en">settings, keys, SMTP</span></td><td><span class="lang-inline lang-de">von Hand neu (Rettungskopie)</span><span class="lang-inline lang-en">re-enter by hand (rescue copy)</span></td></tr>
+    <tr><td><code>/data/mpd.sqlite</code></td><td><code>sessions</code>, <code>shares</code>, <code>contribs</code>, <code>contacts</code></td><td><span class="lang-inline lang-de">neu anmelden, Links weg</span><span class="lang-inline lang-en">sign in again, links gone</span></td></tr>
+    <tr><td><code>/data/mpd-notify.sqlite</code></td><td><code>devices</code>, <code>notifications</code>, <code>digest_journal</code></td><td><span class="lang-inline lang-de">harmlos</span><span class="lang-inline lang-en">harmless</span></td></tr>
+    <tr><td><code>/data/thumb-cache/</code></td><td><span class="lang-inline lang-de">Vorschaubilder</span><span class="lang-inline lang-en">thumbnails</span></td><td><span class="lang-inline lang-de">baut sich neu auf</span><span class="lang-inline lang-en">rebuilds itself</span></td></tr>
+    <tr><td><code>/data/state/</code></td><td><span class="lang-inline lang-de">Log, Suchindex</span><span class="lang-inline lang-en">log, search index</span></td><td><span class="lang-inline lang-de">harmlos</span><span class="lang-inline lang-en">harmless</span></td></tr>
+    <tr><td><code>/data/trails/</code></td><td><span class="lang-inline lang-de">Standorthistorie (Plus)</span><span class="lang-inline lang-en">location history (Plus)</span></td><td><strong><span class="lang-inline lang-de">unersetzlich</span><span class="lang-inline lang-en">irreplaceable</span></strong></td></tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 6. BETRIEB                                                               -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="operations"><span class="lang-inline lang-de">6. Betrieb</span><span class="lang-inline lang-en">6. Operations</span></h2>
+
+<h3><span class="lang-inline lang-de">6.1 Nachtjobs</span><span class="lang-inline lang-en">6.1 Night jobs</span></h3>
+<table>
+  <thead><tr><th><span class="lang-inline lang-de">Wann</span><span class="lang-inline lang-en">When</span></th><th>Job</th><th><span class="lang-inline lang-de">Einstellbar</span><span class="lang-inline lang-en">Configurable</span></th></tr></thead>
+  <tbody>
+    <tr><td><span class="lang-inline lang-de">2 min nach Start</span><span class="lang-inline lang-en">2 min after start</span></td><td><span class="lang-inline lang-de">Rettungskopie, nur wenn noch keine existiert</span><span class="lang-inline lang-en">rescue copy, only if none exists yet</span></td><td>—</td></tr>
+    <tr><td>02:30</td><td><span class="lang-inline lang-de">Rettungskopie</span><span class="lang-inline lang-en">rescue copy</span></td><td><code>MPD_KEEP_HOUR</code>, <code>MPD_KEEP=0</code></td></tr>
+    <tr><td>03:30</td><td><span class="lang-inline lang-de">Aufräumen: Album-Sicherungen (10), Vorschaubilder, Bericht über nicht anzeigbare Dateien</span><span class="lang-inline lang-en">clean-up: album backups (10), thumbnails, report of unviewable files</span></td><td><code>MPD_RETENTION_HOUR</code>, <code>MPD_THUMB_SWEEP</code></td></tr>
+    <tr><td>19:00</td><td><span class="lang-inline lang-de">Upload-Tagesmeldung</span><span class="lang-inline lang-en">upload digest</span></td><td>—</td></tr>
+    <tr><td><span class="lang-inline lang-de">So 18:00</span><span class="lang-inline lang-en">Sun 18:00</span></td><td><span class="lang-inline lang-de">Kuratier-Wochenbericht</span><span class="lang-inline lang-en">curation report</span></td><td>—</td></tr>
+  </tbody>
+</table>
+<div class="lang-block lang-de">
+  <p>Alle Zeiten in der Zeitzone des Containers — ohne <code>TZ</code> ist das UTC, und alles läuft im Sommer zwei Stunden später. Das Paket übernimmt die Zeitzone aus DSM.</p>
+  <p><strong>Rettungskopie</strong> (<code>core/keep.py</code>): legt nach <code>&lt;Foto-Ordner&gt;/.mpd-keep/</code>, was eine Deinstallation sonst mitnähme — beim Admin Konten, Einstellungen und Schlüssel (<code>0600</code>), bei jeder Person ihren Standortverlauf (Plus), dazu eine <code>LIESMICH.txt</code>. Der führende Punkt hält den Ordner aus Alben, Durchlauf und Aufräum-Bericht heraus.</p>
+</div>
+<div class="lang-block lang-en">
+  <p>All times in the container's time zone — without <code>TZ</code> that is UTC, and everything runs two hours late in summer. The package takes the time zone from DSM.</p>
+  <p><strong>Rescue copy</strong> (<code>core/keep.py</code>): writes to <code>&lt;photo folder&gt;/.mpd-keep/</code> what an uninstall would otherwise take along — for the admin: accounts, settings and keys (<code>0600</code>); for each person: their location history (Plus); plus a <code>LIESMICH.txt</code>. The leading dot keeps the folder out of albums, inbox and clean-up report.</p>
+</div>
+
+<h3><span class="lang-inline lang-de">6.2 Logs, Neustart, Update</span><span class="lang-inline lang-en">6.2 Logs, restart, update</span></h3>
+<div class="lang-block lang-de">
+  <ul>
+    <li><strong>Log:</strong> <code>my-photo-diary.log</code> im State-Ordner (<code>MPD_STATE_DIR</code>; im Paket <code>/data/state</code>), 10 MB, 5 Generationen. Dazu <code>docker logs</code>.</li>
+    <li><strong>Neustart</strong> nach Backend-Änderungen — Uvicorn läuft ohne <code>--reload</code>. Frontend-Dateien gelten nach einem Browser-Reload. <code>frontend/login.html</code> und dieses Handbuch werden beim Start eingelesen bzw. ins Image kopiert: Neustart bzw. Neubau.</li>
+    <li><strong>Update im Paket:</strong> neue <code>.spk</code> über die vorhandene einspielen. Beim ersten Start einer neuen Version sichert der Container Konten, Einstellungen und Datenbanken nach <code>/data/backup/&lt;alte Version&gt;-&lt;Zeit&gt;/</code> (5 bleiben).</li>
+    <li><strong>Deinstallieren</strong> entfernt <code>/data</code>. Die Fotos bleiben unberührt, die Rettungskopie ebenso.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><strong>Log:</strong> <code>my-photo-diary.log</code> in the state dir (<code>MPD_STATE_DIR</code>; in the package <code>/data/state</code>), 10 MB, 5 generations. Plus <code>docker logs</code>.</li>
+    <li><strong>Restart</strong> after backend changes — Uvicorn runs without <code>--reload</code>. Frontend files apply after a browser reload. <code>frontend/login.html</code> and this handbook are read at start or copied into the image: restart or rebuild.</li>
+    <li><strong>Update in the package:</strong> install the new <code>.spk</code> over the existing one. On the first start of a new version the container saves accounts, settings and databases to <code>/data/backup/&lt;old version&gt;-&lt;time&gt;/</code> (5 kept).</li>
+    <li><strong>Uninstalling</strong> removes <code>/data</code>. Photos stay untouched, so does the rescue copy.</li>
+  </ul>
+</div>
+
+<h3><span class="lang-inline lang-de">6.3 Fehlersuche</span><span class="lang-inline lang-en">6.3 Troubleshooting</span></h3>
+<table>
+  <thead><tr><th><span class="lang-inline lang-de">Beobachtung</span><span class="lang-inline lang-en">Symptom</span></th><th><span class="lang-inline lang-de">Meist</span><span class="lang-inline lang-en">Usually</span></th><th><span class="lang-inline lang-de">Nachsehen</span><span class="lang-inline lang-en">Look at</span></th></tr></thead>
+  <tbody>
+    <tr><td><span class="lang-inline lang-de">Ordner erscheint nicht unter „Album hinzufügen“</span><span class="lang-inline lang-en">folder missing from "Add album"</span></td><td><span class="lang-inline lang-de">nackte Jahreszahl (Durchlauf), Fotos in Unterordnern, schon eine album.json</span><span class="lang-inline lang-en">bare year (inbox), photos in subfolders, album.json already there</span></td><td><code>/api/albums/without-json</code></td></tr>
+    <tr><td><span class="lang-inline lang-de">Persönlicher Bereich leer</span><span class="lang-inline lang-en">personal space empty</span></td><td><span class="lang-inline lang-de"><code>personal_path</code> gilt im Container nicht</span><span class="lang-inline lang-en"><code>personal_path</code> not valid inside the container</span></td><td><code>users.json</code>, <code>docker exec … ls</code></td></tr>
+    <tr><td><span class="lang-inline lang-de">Vorschaubilder veraltet oder fehlen massenhaft</span><span class="lang-inline lang-en">thumbnails stale or missing en masse</span></td><td><span class="lang-inline lang-de">mtime geändert (Kopierwerkzeug ohne Zeitstempel)</span><span class="lang-inline lang-en">mtime changed (copy tool not preserving timestamps)</span></td><td><span class="lang-inline lang-de">Log, Zeilen <code>library_warmer</code></span><span class="lang-inline lang-en">log, lines <code>library_warmer</code></span></td></tr>
+    <tr><td><span class="lang-inline lang-de">Nachtjob zur falschen Zeit</span><span class="lang-inline lang-en">night job at the wrong time</span></td><td><span class="lang-inline lang-de">Container in UTC</span><span class="lang-inline lang-en">container in UTC</span></td><td><code>TZ</code>, <span class="lang-inline lang-de">Zeitstempel im Log</span><span class="lang-inline lang-en">log timestamps</span></td></tr>
+    <tr><td><span class="lang-inline lang-de">Freigabelink → 404</span><span class="lang-inline lang-en">share link → 404</span></td><td><span class="lang-inline lang-de">widerrufen, abgelaufen, Foto gesperrt</span><span class="lang-inline lang-en">revoked, expired, photo locked</span></td><td><code>scripts/share_admin.py</code></td></tr>
+    <tr><td><span class="lang-inline lang-de">Menüpunkt mit Schloss</span><span class="lang-inline lang-en">menu item with a lock</span></td><td><span class="lang-inline lang-de">Modul nicht installiert, nicht freigeschaltet oder nicht lizenziert</span><span class="lang-inline lang-en">module not installed, not enabled or not licensed</span></td><td><code>/api/whoami</code> → <code>modules</code></td></tr>
+    <tr><td><span class="lang-inline lang-de">Löschen ohne Papierkorb</span><span class="lang-inline lang-en">delete without recycle bin</span></td><td><span class="lang-inline lang-de">kein <code>#recycle</code> (Docker-Volume, Papierkorb der Freigabe aus)</span><span class="lang-inline lang-en">no <code>#recycle</code> (Docker volume, share recycle bin off)</span></td><td><code>/api/recycle-status/{space}</code></td></tr>
+  </tbody>
+</table>
+
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<!-- 7. ERWEITERN                                                             -->
+<!-- ════════════════════════════════════════════════════════════════════════ -->
+<h2 id="extending"><span class="lang-inline lang-de">7. Erweitern</span><span class="lang-inline lang-en">7. Extending</span></h2>
+
+<h3><span class="lang-inline lang-de">7.1 Ein neuer Endpunkt</span><span class="lang-inline lang-en">7.1 A new endpoint</span></h3>
+<pre><code># routers/widgets.py
+@router.get("/api/widgets/{space}/{name}")
+async def list_widgets(request: Request, space: str, name: str):
+    session = require_session(request)              # 401 without a session
+    base = get_path(session, space)                  # the only legitimate way to a path
+    if is_readonly(session, space):                  # permission from routers/deps.py
+        raise HTTPException(403, _t("widgets.readonly", request))
+    target = (base / name).resolve()                 # never trust user input:
+    if not target.is_relative_to(base.resolve()):    # resolve() + is_relative_to()
+        raise HTTPException(400, _t("common.bad_path", request))
+    data = await asyncio.to_thread(read_something, target)   # blocking I/O off the loop
+    logger.info("Widgets listed by %s", session.user)
+    return {"widgets": data}
+
+# main.py: app.include_router(widgets.router)</code></pre>
+
+<h3><span class="lang-inline lang-de">7.2 Ein neuer Elementtyp</span><span class="lang-inline lang-en">7.2 A new element type</span></h3>
+<div class="lang-block lang-de">
+  <ol>
+    <li><code>routers/albums.py</code>: <code>known_types</code>, Regeln in <code>validate_album_data</code> — <strong>und <code>ALLOWED</code> in <code>update_album</code></strong>, sonst verwirft das Speichern die Felder.</li>
+    <li><code>js/album-render.js</code> (Anzeige), <code>js/album-insert.js</code> (Einfügen).</li>
+    <li><code>routers/share.py</code>: Anreicherung für Gäste — sonst sieht der Empfänger nichts.</li>
+    <li>PDX-Spezifikation fortschreiben.</li>
+  </ol>
+</div>
+<div class="lang-block lang-en">
+  <ol>
+    <li><code>routers/albums.py</code>: <code>known_types</code>, rules in <code>validate_album_data</code> — <strong>and <code>ALLOWED</code> in <code>update_album</code></strong>, or saving drops the fields.</li>
+    <li><code>js/album-render.js</code> (display), <code>js/album-insert.js</code> (insert).</li>
+    <li><code>routers/share.py</code>: enrichment for guests — otherwise recipients see nothing.</li>
+    <li>Update the PDX specification.</li>
+  </ol>
+</div>
+
+<h3><span class="lang-inline lang-de">7.3 Regeln in einem Satz</span><span class="lang-inline lang-en">7.3 Rules in one sentence</span></h3>
+<div class="lang-block lang-de">
+  <ul>
+    <li><strong>Atomar schreiben:</strong> tmp-Datei + <code>os.replace</code>, Geheimnisse mit <code>0600</code>.</li>
+    <li><strong>Pfade:</strong> nie <code>base / eingabe</code> ohne <code>resolve()</code> + <code>is_relative_to()</code>. Symlink-Sicherheit kommt aus <code>resolve()</code>, nicht aus <code>is_symlink</code>.</li>
+    <li><strong>Rechte</strong> ausschließlich über <code>routers/deps.py</code>; nie <code>session.role</code> direkt prüfen.</li>
+    <li><strong>Texte</strong> für Menschen immer über i18n, in beiden Sprachen. Code, Kommentare und Log dürfen Englisch oder Deutsch sein, Log-Zeilen mit <code>%s</code>.</li>
+    <li><strong>Frontend:</strong> kein <code>alert()</code>/<code>confirm()</code>/<code>prompt()</code> — <code>window.mpdConfirm()</code>. Nach jeder Änderung an JS/CSS die <code>?v=N</code> im HTML hochsetzen. Globale Funktionen mit Präfix (<code>album…</code>, <code>lb…</code>): Es gibt keinen Namensraum.</li>
+    <li><strong>Kern und Module:</strong> Der Kern importiert kein Modul. Braucht er eines, meldet er ein Ereignis.</li>
+    <li><strong>Caches</strong> brauchen ein Signal, das zu ihrer Quelle passt (mtime, Ereignis) — Zeit allein ist kein Grund.</li>
+  </ul>
+</div>
+<div class="lang-block lang-en">
+  <ul>
+    <li><strong>Write atomically:</strong> tmp file + <code>os.replace</code>, secrets with <code>0600</code>.</li>
+    <li><strong>Paths:</strong> never <code>base / input</code> without <code>resolve()</code> + <code>is_relative_to()</code>. Symlink safety comes from <code>resolve()</code>, not from <code>is_symlink</code>.</li>
+    <li><strong>Permissions</strong> only through <code>routers/deps.py</code>; never check <code>session.role</code> directly.</li>
+    <li><strong>Text</strong> for people always through i18n, in both languages. Code, comments and logs may be English or German, log lines with <code>%s</code>.</li>
+    <li><strong>Frontend:</strong> no <code>alert()</code>/<code>confirm()</code>/<code>prompt()</code> — <code>window.mpdConfirm()</code>. After every JS/CSS change raise the <code>?v=N</code> in the HTML. Global functions get a prefix (<code>album…</code>, <code>lb…</code>): there is no namespace.</li>
+    <li><strong>Core and modules:</strong> the core imports no module. If it needs one, it emits an event.</li>
+    <li><strong>Caches</strong> need a signal matching their source (mtime, event) — time alone is no reason.</li>
+  </ul>
+</div>
+
+<hr>
+
+<div class="lang-block lang-de">
+  <p style="font-size:0.86rem; color:var(--lgrey); font-family:-apple-system,sans-serif; margin-top:2rem;">
+    Stand 19.09.2026. Der Code ist die Wahrheit, dieses Dokument das Echo — wo beide sich widersprechen, gilt der Code, und das Handbuch braucht eine Korrektur. Mehr zur Architektur: <code>ARCHITEKTUR.md</code>.
+  </p>
+</div>
+<div class="lang-block lang-en">
+  <p style="font-size:0.86rem; color:var(--lgrey); font-family:-apple-system,sans-serif; margin-top:2rem;">
+    As of 2026-09-19. The code is the truth, this document the echo — where they disagree, the code wins and the handbook needs a fix. More on the architecture: <code>ARCHITEKTUR.md</code> (German).
+  </p>
+</div>
+
+</main>
+</div>
+
+<footer class="handbook-foot">
+  <span><strong>My Photo Diary 3.0</strong> · <span class="lang-inline lang-de">Entwickler-Handbuch</span><span class="lang-inline lang-en">Developer handbook</span></span>
+  <span><span class="lang-inline lang-de">Strg+P für PDF · eigenständig</span><span class="lang-inline lang-en">Ctrl+P for PDF · self-contained</span></span>
+</footer>
+
+
+<script>
+(function(){
+  // Language toggle: persists in localStorage, defaults to browser language.
+  var KEY = 'mpd_handbook_lang';
+  function detect(){
+    try { var s = localStorage.getItem(KEY); if (s === 'de' || s === 'en') return s; } catch(e){}
+    var n = (navigator.language || 'de').toLowerCase().split('-')[0];
+    return (n === 'en') ? 'en' : 'de';
+  }
+  function setLang(lang){
+    if (lang !== 'de' && lang !== 'en') return;
+    document.body.setAttribute('data-lang', lang);
+    document.documentElement.setAttribute('lang', lang);
+    document.querySelectorAll('.lang-toggle button').forEach(function(b){
+      b.classList.toggle('is-active', b.getAttribute('data-lang-set') === lang);
+    });
+    try { localStorage.setItem(KEY, lang); } catch(e){}
+  }
+  setLang(detect());
+  document.querySelectorAll('.lang-toggle button').forEach(function(b){
+    b.addEventListener('click', function(){ setLang(b.getAttribute('data-lang-set')); });
+  });
+})();
+</script>
+
+</body>
+</html>
+

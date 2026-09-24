@@ -1,0 +1,13 @@
+# Laufzeit
+*.log
+*.log.*
+*.pid
+__pycache__/
+*.pyc
+backend/mpd_search_index.json
+
+# Konfiguration und Daten — gehören nie ins Repo
+mpd.env
+mpd.env.local
+data/
+photos/

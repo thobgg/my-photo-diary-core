@@ -1,0 +1,637 @@
+/* MPD Edit-Mode — Text
+ * Text-Blocks (contentEditable), Toolbar (OK + Emoji), Style-Selektor,
+ * Hidden-Toggle, Meta-Editing (Titel/Jahr), Text-Drag-Handle, Separatoren.
+ */
+
+/* ============================================
+   Text-Block Editing
+   ============================================ */
+
+.text-block { position: relative; }
+
+/* Inneres editierbares Div – trennt Text von Buttons */
+.text-inner {
+    display: block;
+    width: 100%;
+    min-height: 1.6em;
+    white-space: pre-wrap;
+    word-break: break-word;
+    outline: none;
+    line-height: 1.8;
+}
+
+/* Leerer Block – Placeholder auf .text-inner */
+.text-block.editable.is-empty .text-inner::before {
+    content: 'Beschreibung eingeben...';
+    color: rgba(180, 180, 180, 0.55);
+    font-style: italic;
+    pointer-events: none;
+    display: block;
+}
+
+/* Highlight für neu eingefügte Blöcke – auffällig sichtbar */
+.text-block.new-block-highlight {
+    border: 2px solid #667eea !important;
+    background-color: rgba(102, 126, 234, 0.12) !important;
+    min-height: 80px !important;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.25);
+}
+
+.text-block.editable {
+    cursor: text;
+    border: none;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+    min-height: 48px;
+    white-space: pre-wrap;
+    outline: none;
+}
+
+.text-block.editable:hover {
+    background-color: rgba(102, 126, 234, 0.04);
+}
+
+.text-block.editing {
+    background-color: rgba(102, 126, 234, 0.08) !important;
+}
+
+/* Delete-Button */
+.delete-text-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    left: auto;
+    background: rgba(0,0,0,0.65);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.15s, transform 0.15s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-block:hover .delete-text-btn { opacity: 1; }
+.delete-text-btn:hover { background: rgba(211,47,47,.9); transform: scale(1.12); }
+
+@media (hover: none) and (pointer: coarse) {
+    .edit-mode-active .delete-text-btn { opacity: 1; }
+}
+
+
+/* ============================================
+   Text-Edit Toolbar: OK + Emoji
+   ============================================ */
+
+.text-edit-toolbar {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    z-index: 15;
+}
+
+.text-toolbar-btn {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.text-ok-btn {
+    background: var(--blue, #2E75B6);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    letter-spacing: 0.03em;
+}
+.text-ok-btn:hover { background: #1a5c9a; }
+.text-ok-btn:active { transform: scale(0.95); }
+
+.emoji-picker-btn {
+    background: rgba(255,255,255,0.12);
+    font-size: 1.1rem;
+    padding: 4px 8px;
+}
+.emoji-picker-btn:hover { background: rgba(255,255,255,0.22); }
+
+/* Emoji Popup — wird nur auf Desktop (≥1024px) gerendert.
+ * Großzügig dimensioniert für umfangreichen Themen-Set (~80 Emojis,
+ * ~10 Zeilen × 8 Spalten). */
+.emoji-picker-popup {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 6px;
+    background: var(--surface, #1a1a1a);
+    border: 1px solid var(--border, #333);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+    width: 340px;
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 100;
+}
+
+.emoji-pick {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.1s;
+    line-height: 1.2;
+}
+.emoji-pick:hover {
+    background: var(--blue-pale, rgba(46,117,182,0.15));
+}
+
+@media (max-width: 768px) {
+    /* Tablet-Portrait hat noch alle Buttons — Mindesthöhe sichert,
+       dass Top-Right (× + Stil + Lock) nicht in Bottom-Toolbar
+       (😀 + ✨ + OK) rutscht. */
+    .text-block.editable { min-height: 110px; }
+
+    /* Toolbar darf umbrechen und bleibt innerhalb des Text-Blocks. */
+    .text-edit-toolbar {
+        bottom: 4px;
+        right: 4px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        max-width: calc(100% - 8px);
+    }
+    .text-ok-btn { padding: 6px 16px; font-size: 0.85rem; }
+    .emoji-picker-btn { font-size: 1.2rem; padding: 5px 10px; }
+    .emoji-picker-popup {
+        grid-template-columns: repeat(7, 1fr);
+        width: 260px;
+    }
+    .emoji-pick { font-size: 1.5rem; padding: 6px; }
+}
+
+/* ── Phone (≤480px): Radikal minimal ──
+   Stil-Select, Lock-Toggle, KI-Companion werden ausgeblendet.
+   Phone ist für „schnell Erinnerung eingeben" — alles Kuratierende
+   (Style, Privat-Setzen, KI-Formulierung) läuft am Tablet/Desktop.
+   Übrig: × zum Entfernen oben rechts, OK unten rechts. */
+@media (max-width: 480px) {
+    body.edit-mode-active .style-select-btn,
+    body.edit-mode-active .locked-toggle-btn,
+    body.edit-mode-active .companion-btn { display: none !important; }
+
+    /* Weniger Controls → weniger vertikaler Druck. 110 war vorsorglich,
+       auf Phone reicht 72px für 1 Zeile Text + kleine Toolbar. */
+    .text-block.editable { min-height: 72px; }
+}
+
+/* ── Touch-Geräte: Emoji-Picker raus ──
+   Auf Phone + Tablet (touch-only) hat die System-Tastatur bereits
+   einen nativen Emoji-Picker. Unserer ist redundant und klaut Platz.
+   Desktop mit Maus behält ihn als schnellen Einstieg. */
+@media (hover: none) and (pointer: coarse) {
+    .text-block.editable .emoji-picker-btn,
+    .text-block.editable .emoji-picker-popup { display: none !important; }
+}
+
+
+/* ============================================
+   Style-Select Button + Dropdown
+   ============================================ */
+
+.style-select-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(102, 126, 234, 0.88);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.15s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-block:hover .style-select-btn { opacity: 1; }
+.style-select-btn:hover { background: rgba(102, 126, 234, 1); transform: scale(1.12); }
+
+@media (max-width: 768px) {
+    .style-select-btn { opacity: 1; width: 40px; height: 40px; right: 56px; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .style-select-btn { opacity: 1; }
+}
+
+.style-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: #1e1e1e;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    z-index: 100;
+    min-width: 130px;
+    overflow: hidden;
+}
+
+.style-option {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.style-option:hover    { background: rgba(102, 126, 234, 0.2); }
+.style-option.active   { background: rgba(102, 126, 234, 0.35); color: white; font-weight: 600; }
+
+
+/* ============================================
+   Locked-Toggle Button (🔒/🔓)
+   ============================================ */
+
+.locked-toggle-btn {
+    position: absolute;
+    top: 8px;
+    right: 44px;          /* neben delete-text-btn (right:8px, 28px breit + 8px gap) */
+    left: auto;
+    background: rgba(80, 80, 80, 0.88);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.15s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-block:hover .locked-toggle-btn { opacity: 1; }
+.locked-toggle-btn:hover { background: rgba(80, 80, 80, 1); transform: scale(1.12); }
+
+@media (max-width: 768px) {
+    .locked-toggle-btn { opacity: 1; width: 40px; height: 40px; top: 8px; right: 104px; left: auto; }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .locked-toggle-btn { opacity: 1; }
+}
+
+
+/* ============================================
+   Meta-Editing – Titel & Jahr im Header
+   ============================================ */
+
+.meta-edit-input {
+    background    : transparent !important;
+    border        : none !important;
+    border-bottom : 2px solid rgba(255, 255, 255, 0.4) !important;
+    border-radius : 0 !important;
+    box-shadow    : none !important;
+    color         : inherit !important;
+    font-family   : inherit !important;
+    outline       : none !important;
+    text-align    : center;
+    transition    : border-color 0.2s;
+    width         : 100%;
+    display       : block;
+}
+
+.meta-edit-input:focus {
+    background         : transparent !important;
+    border-bottom-color: rgba(255, 255, 255, 0.9) !important;
+    box-shadow         : none !important;
+    outline            : none !important;
+}
+
+.meta-edit-title {
+    font-size  : 1.8rem;
+    font-weight: 700;
+    padding    : 0.1rem 0.5rem 0.2rem;
+}
+
+.meta-edit-year {
+    font-size         : 1rem;
+    color             : #bbb !important;
+    margin-top        : 0.2rem;
+    padding           : 0.1rem 0.5rem 0.1rem;
+    width             : 6rem;
+    -moz-appearance   : textfield !important;
+}
+.meta-edit-year::-webkit-outer-spin-button,
+.meta-edit-year::-webkit-inner-spin-button {
+    -webkit-appearance: none !important;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .meta-edit-title { font-size: 1.05rem; }
+    .meta-edit-year  { font-size: 0.85rem; width: 5rem; }
+}
+
+
+/* ============================================
+   Text-Block: Drag-Handle-Streifen + Cursor-Fix
+   ============================================ */
+
+.text-block.editable { cursor: grab !important; }
+/* pointer-events stays at the default (auto) — edit-core.css governs touch
+   selection/callout via user-select and -webkit-touch-callout, not via
+   pointer-events. Forcing pointer-events here would override nothing useful
+   and complicates future touch tweaks. */
+.text-block.editable .text-inner { cursor: text; }
+
+/* Delete × Button — oben links wie Foto-Button */
+.delete-text-btn {
+    position: absolute !important;
+    top: 6px !important; left: 6px !important; right: auto !important;
+    background: rgba(0,0,0,0.65) !important;
+    color: #fff !important;
+    border: none;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    font-size: 1.2rem; line-height: 1;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: background 0.15s, transform 0.15s;
+    z-index: 15;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+}
+.delete-text-btn:hover { background: rgba(211,47,47,0.9) !important; transform: scale(1.1); }
+
+
+/* ============================================
+   Separator Element
+   ============================================ */
+
+.separator-element {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 0;
+    position: relative;
+}
+.separator-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent, #2E75B6) 30%, var(--accent, #2E75B6) 70%, transparent);
+    opacity: 0.45;
+    border-radius: 2px;
+}
+.separator-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent, #2E75B6);
+    opacity: 0.7;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Delete auf Separator — rechts zentriert */
+.separator-element .remove-photo-btn {
+    position: absolute;
+    top: 50%; right: 0;
+    transform: translateY(-50%);
+    opacity: 0;
+}
+.separator-element:hover .remove-photo-btn { opacity: 1; }
+@media (hover: none) {
+    .edit-mode-active .separator-element .remove-photo-btn { opacity: 0.85; }
+}
+
+/* Separator Label Edit-Input */
+.separator-label-edit {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed rgba(255,255,255,0.3);
+    color: var(--text-secondary, #888);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+    width: 120px;
+    padding: 2px 6px;
+    outline: none;
+    flex-shrink: 0;
+}
+.separator-label-edit:focus {
+    border-bottom-color: var(--accent, #2E75B6);
+    color: var(--text-primary, #e8eaf0);
+}
+[data-theme="light"] .separator-label-edit {
+    border-bottom-color: rgba(0,0,0,0.2);
+    color: rgba(0,0,0,0.5);
+}
+
+
+/* ── Separator-Stile ── */
+
+/* bold: volle durchgehende Linie */
+.separator-element.sep-style-bold .separator-line {
+    background: var(--accent, #2E75B6);
+    opacity: 0.6;
+}
+
+/* dashed: gestrichelt */
+.separator-element.sep-style-dashed .separator-line {
+    background: none;
+    height: 0;
+    border-top: 2px dashed var(--accent, #2E75B6);
+    opacity: 0.45;
+    border-radius: 0;
+}
+
+/* dots: Punkte in der Mitte, Linien unsichtbar */
+.separator-element.sep-style-dots .separator-line {
+    opacity: 0;
+}
+.separator-element.sep-style-dots:not(.has-label)::before {
+    content: '· · ·';
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.35rem;
+    letter-spacing: 0.55em;
+    padding-left: 0.55em; /* offset für letztes Zeichen letter-spacing */
+    color: var(--accent, #2E75B6);
+    opacity: 0.55;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+/* space: unsichtbarer Abstand */
+.separator-element.sep-style-space .separator-line,
+.separator-element.sep-style-space .separator-label {
+    opacity: 0;
+}
+
+/* ── Stil-Button auf Separator (Edit-Mode) ── */
+.sep-style-btn {
+    position: absolute;
+    top: 50%;
+    right: 70px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    background: rgba(102, 126, 234, 0.82);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    line-height: 1;
+    letter-spacing: 0;
+    padding: 0;
+}
+.separator-element:hover .sep-style-btn { opacity: 1; }
+@media (hover: none) {
+    .edit-mode-active .sep-style-btn { opacity: 0.85; }
+}
+
+/* ── Stil-Chips im Einfügen-Dialog ── */
+.sep-style-picker {
+    display: flex;
+    gap: 6px;
+}
+.sep-style-chip {
+    flex: 1;
+    padding: 7px 2px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 7px;
+    color: var(--muted, #888);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    text-align: center;
+    white-space: nowrap;
+}
+.sep-style-chip:hover { background: rgba(255,255,255,0.13); color: var(--text, #e8eaf0); }
+.sep-style-chip.active {
+    background: var(--accent, #2E75B6);
+    border-color: var(--accent, #2E75B6);
+    color: #fff;
+}
+[data-theme="light"] .sep-style-chip {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.13);
+    color: rgba(0,0,0,0.5);
+}
+[data-theme="light"] .sep-style-chip:hover { background: rgba(0,0,0,0.08); color: rgba(0,0,0,0.8); }
+[data-theme="light"] .sep-style-chip.active { background: var(--accent, #2E75B6); border-color: var(--accent, #2E75B6); color: #fff; }
+
+/* ============================================
+   Separator Dialog
+   ============================================ */
+
+.separator-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.separator-dialog-box {
+    background: var(--header-bg, #1e2d3d);
+    border-radius: 12px;
+    padding: 24px;
+    min-width: 320px;
+    max-width: 480px;
+    width: 90%;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.separator-dialog-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #e8eaf0);
+}
+.separator-dialog-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.07);
+    color: var(--text-primary, #e8eaf0);
+    font-size: 0.95rem;
+    outline: none;
+}
+.separator-dialog-input:focus { border-color: var(--accent, #2E75B6); }
+.separator-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.separator-dialog-btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+.separator-dialog-cancel {
+    background: rgba(255,255,255,0.1);
+    color: var(--text-primary, #e8eaf0);
+}
+.separator-dialog-cancel:hover { background: rgba(255,255,255,0.18); }
+.separator-dialog-ok {
+    background: var(--accent, #2E75B6);
+    color: #fff;
+}
+.separator-dialog-ok:hover { background: #1b5e9e; }

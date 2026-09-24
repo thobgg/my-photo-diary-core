@@ -1,0 +1,1548 @@
+/* ═══════════════════════════════════════════
+   Lightbox CSS
+   Alle Lightbox-spezifischen Styles
+   ═══════════════════════════════════════════ */
+
+/* ── Lightbox Container ── */
+.lightbox {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    /* Deckend statt rgba(0,0,0,0.97): die drei Prozent Transparenz fielen am
+       Handy nicht auf, weil dort kaum Hintergrund sichtbar ist. Auf einem
+       14,6-Zoll-Tablet im Querformat liegen links und rechts breite Flaechen
+       frei, und dort schimmerte die Albumseite durch. */
+    background: #000;
+    z-index: 10000;
+}
+
+.lightbox.active {
+    display: block;
+}
+
+.lb-container {
+    display: flex;
+    height: 100vh;
+}
+
+/* ── Lightbox Main Area ── */
+.lb-main {
+    flex: 1;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.lb-image-wrapper {
+    position: relative;
+    max-width: 90%;
+    max-height: 90vh;
+    cursor: zoom-in;
+    transition: transform 0.3s ease;
+}
+
+.lb-image-wrapper.zoomed {
+    cursor: zoom-out;
+    max-width: none;
+    max-height: none;
+}
+
+.lb-image-wrapper img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+}
+
+.lb-image-wrapper.zoomed img {
+    max-width: none;
+    max-height: none;
+    width: auto;
+    height: auto;
+}
+
+/* ── Lightbox Sidebar ── */
+.lb-sidebar {
+    width: 360px;
+    min-width: 360px;
+    background: #1a1a1a;
+    border-left: 1px solid #333;
+    padding: 2rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    overflow-x: hidden;
+    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, border 0.3s ease;
+}
+
+.lb-sidebar.hidden {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border-left: none;
+}
+
+.lb-sidebar h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+/* Section-Header-Icon im EXIF-Sidebar — gleiches Vokabular wie Lightbox-
+   Controls (Lucide outline, currentColor). 18px in 18px-Container,
+   leicht abgesetzt vs. Label. */
+.lb-meta-h3-icon { display: inline-flex; width: 18px; height: 18px; flex-shrink: 0; opacity: 0.75; }
+.lb-meta-h3-icon svg { width: 100%; height: 100%; }
+
+/* Geo-Search-Loader: dezent rotieren während Nominatim-Anfrage */
+.exif-icon-spin { animation: mpd-exif-spin 1s linear infinite; }
+@keyframes mpd-exif-spin { to { transform: rotate(360deg); } }
+
+/* SVG in Buttons innerhalb der Sidebar (lb-exif-map-toggle, geoBtn,
+   warn-span, OSM-link) — sicherheitshalber Default-Sizing. */
+#lb-exif-map-toggle svg,
+#lb-exif-geo-btn svg,
+.lb-map-link svg { width: 14px; height: 14px; flex-shrink: 0; vertical-align: middle; }
+
+.lb-meta-group {
+    margin-bottom: 1.5rem;
+}
+
+.lb-meta-item {
+    display: flex;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.lb-meta-label {
+    color: #888;
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.lb-meta-value {
+    color: #e0e0e0;
+}
+
+.lb-map {
+    width: 100%;
+    height: 200px;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.lb-map-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: #4a9eff;
+    text-decoration: none;
+    font-size: 0.85rem;
+}
+
+.lb-map-link:hover {
+    text-decoration: underline;
+}
+
+/* ── Lightbox Controls ── */
+.lb-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.lb-close:hover {
+    background: rgba(255,255,255,0.3);
+    transform: rotate(90deg);
+}
+.lb-close svg { width: 22px; height: 22px; }
+
+.lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.lb-nav:hover {
+    background: rgba(255,255,255,0.3);
+}
+.lb-nav svg { width: 22px; height: 22px; }
+
+.lb-prev {
+    left: 20px;
+}
+
+.lb-next {
+    right: 20px;
+}
+
+/* ── Bottom Controls ── */
+.lb-bottom-controls {
+    position: absolute;
+    bottom: calc(20px + var(--inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    z-index: 10;
+}
+
+.lb-btn {
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 24px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.lb-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+.lb-btn:hover {
+    background: rgba(255,255,255,0.25);
+}
+
+.lb-btn.active {
+    background: rgba(255,255,255,0.3);
+}
+
+.lb-counter {
+    background: rgba(0,0,0,0.7);
+    padding: 8px 16px;
+    border-radius: 20px;
+    color: #fff;
+    font-size: 0.9rem;
+    backdrop-filter: blur(10px);
+}
+
+/* ── Help Overlay ── */
+/* ── Help: linke Sidebar (spiegelbildlich zu lb-sidebar rechts) ── */
+.help-overlay-backdrop { display: none; } /* nicht mehr benötigt */
+
+.help-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    height: 100vh;
+    background: #1a1a1a;
+    border-right: 1px solid #333;
+    padding: 2rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: #fff;
+    font-size: 0.85rem;
+    z-index: 20000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    box-sizing: border-box;
+}
+
+.help-overlay.show {
+    transform: translateX(0);
+}
+
+.help-overlay h4 {
+    margin-bottom: 1.2rem;
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.help-overlay div {
+    margin: 8px 0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: rgba(255,255,255,0.85);
+}
+
+.help-overlay kbd {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 0.78rem;
+    min-width: 28px;
+    text-align: center;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+}
+
+@media (max-width: 768px) {
+    .help-overlay {
+        width: 100%;
+        max-width: 320px;
+    }
+}
+
+/* ── Responsive Lightbox ── */
+@media (max-width: 768px) {
+    .lb-image-wrapper {
+        max-width: 95vw;
+        max-height: 85vh;
+    }
+
+    .lb-image-wrapper img {
+        max-width: 95vw;
+        max-height: 85vh;
+    }
+
+    .lb-sidebar {
+        width: 100%;
+        min-width: 0;
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        z-index: 20;
+        overflow-y: auto;
+    overscroll-behavior: contain;
+        transition: width 0.3s ease, padding 0.3s ease;
+    }
+
+    .lb-sidebar.hidden {
+        width: 0;
+        padding: 0;
+    }
+}
+
+/* ── Touch-Lightbox — neue Topbar + Edit-FAB ──
+   Verdrängt alte Bottom-Buttons, Nav-Pfeile und Close-Button.
+   Datum/Zeit/Ort kommen aus EXIF (async via loadMetadata).
+
+   Die Auswahl lief früher allein über `max-width: 1023px`. Ein Tablet im
+   Querformat hat aber 1280 CSS-Pixel (2560×1600 bei Faktor 2) und bekam
+   damit die Desktop-Oberfläche: Schließen-Knopf, Pfeile, Bottom-Controls.
+   Im Hochformat (800px) stimmte es, im Querformat nicht — ein Gerät, zwei
+   Bedienkonzepte.
+
+   Maßgeblich ist deshalb jetzt, ob mit dem Finger bedient wird:
+   `(hover: none) and (pointer: coarse)` trifft Handy und Tablet, aber
+   keinen Desktop mit Maus. Die Breitengrenze bleibt zusätzlich stehen —
+   für schmale Desktop-Fenster, die ebenfalls keine Sidebar vertragen. */
+.lb-mobile-topbar { display: none; }
+.lb-mobile-fab    { display: none; }
+
+@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+    /* Alte Controls ausblenden — werden durch Topbar/FAB/Swipe ersetzt */
+    .lightbox .lb-close,
+    .lightbox .lb-nav,
+    .lightbox .lb-bottom-controls {
+        display: none !important;
+    }
+
+    /* touch-action: none auf der ganzen Lightbox-Hauptfläche, damit
+       der Browser nicht "pull-to-refresh" / "scroll" interpretiert,
+       wenn der User über Topbar/FAB-Bereich nach oben wischt. */
+    .lightbox.active .lb-main { touch-action: none; }
+
+    /* ── Topbar: Zurück | Datum/Zeit·Ort | Kebab ── */
+    .lb-mobile-topbar {
+        display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        align-items: center;
+        gap: 10px;
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+        background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0));
+        z-index: 15;
+        pointer-events: none;  /* Topbar selbst transparent für Wisch-Gesten */
+    }
+    .lb-mobile-topbar > * { pointer-events: auto; }
+
+    .lb-mobile-back,
+    .lb-mobile-kebab {
+        background: rgba(0,0,0,0.45);
+        border: none;
+        color: #fff;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        backdrop-filter: blur(10px);
+        flex-shrink: 0;
+        transition: background 0.15s;
+    }
+    .lb-mobile-back:hover,
+    .lb-mobile-kebab:hover { background: rgba(0,0,0,0.7); }
+    .lb-mobile-back svg,
+    .lb-mobile-kebab svg { width: 22px; height: 22px; }
+
+    .lb-mobile-meta {
+        flex: 1;
+        min-width: 0;
+        text-align: center;
+        color: #fff;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+    }
+    .lb-mobile-date {
+        font-size: 0.95rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.15;
+    }
+    .lb-mobile-subline {
+        font-size: 0.72rem;
+        color: rgba(255,255,255,0.78);
+        margin-top: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.15;
+    }
+
+    /* Kebab-Menü — Dropdown rechts unter dem Button */
+    .lb-mobile-kebab-menu {
+        position: absolute;
+        top: calc(58px + env(safe-area-inset-top, 0px));
+        right: 12px;
+        background: rgba(28,28,28,0.96);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        padding: 6px;
+        min-width: 220px;
+        z-index: 16;
+        backdrop-filter: blur(12px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .lb-mobile-kebab-menu[hidden] { display: none; }
+    .lb-mobile-kebab-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 0.92rem;
+        padding: 10px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: left;
+        transition: background 0.12s;
+    }
+    .lb-mobile-kebab-item:hover:not(:disabled) { background: rgba(255,255,255,0.08); }
+    .lb-mobile-kebab-item .lb-kebab-icon {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .lb-mobile-kebab-item .lb-kebab-icon svg { width: 20px; height: 20px; }
+    .lb-mobile-kebab-item.lb-mobile-kebab-danger { color: #ff8c8c; }
+    .lb-mobile-kebab-item.lb-mobile-kebab-danger:hover { background: rgba(180,30,30,0.25); }
+    .lb-mobile-kebab-item.lb-mobile-kebab-disabled {
+        color: rgba(255,255,255,0.35);
+        cursor: default;
+    }
+    .lb-kebab-soon {
+        margin-left: auto;
+        font-size: 0.7rem;
+        color: rgba(255,255,255,0.4);
+        background: rgba(255,255,255,0.08);
+        padding: 2px 7px;
+        border-radius: 8px;
+    }
+    .lb-mobile-kebab-sep {
+        height: 1px;
+        background: rgba(255,255,255,0.08);
+        margin: 4px 0;
+    }
+
+    /* ── Edit-FAB: unten zentriert, SVG-Stift wie album-primary-fab ── */
+    .lb-mobile-fab {
+        display: flex;
+        position: absolute;
+        bottom: calc(20px + var(--inset-bottom, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: rgba(46,117,182,0.92);
+        border: none;
+        color: #fff;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 14;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        transition: background 0.2s, transform 0.15s;
+    }
+    .lb-mobile-fab:hover  { background: rgba(58,143,209,0.98); }
+    .lb-mobile-fab:active { transform: translateX(-50%) scale(0.94); }
+    .lb-mobile-fab svg    { width: 26px; height: 26px; }
+    .lb-mobile-fab[hidden] { display: none !important; }
+
+    /* Bild-Bereich an Topbar/FAB anpassen — etwas mehr Luft oben/unten */
+    .lb-image-wrapper {
+        max-height: 80vh;
+    }
+    .lb-image-wrapper img {
+        max-height: 80vh;
+    }
+}
+
+/* ── Randlos auf grossen Beruehrungsgeraeten ──
+   Der Touch-Block oben setzt bewusst 80vh, damit am Handy Luft fuer Topbar
+   und FAB bleibt. Auf einem 14,6-Zoll-Tablet im Querformat verschenkt das
+   Flaeche. Diese Regel steht deshalb NACH dem Touch-Block — ein frueherer
+   Block wurde von dessen 80vh ueberschrieben.
+
+   Einheit ist dvh, nicht vh: am Geraet gemessen sind 100vh = 846px,
+   waehrend nur 750px sichtbar sind (vh bezieht sich auf den groesstmoeglichen
+   Viewport mit eingeklappter Browserleiste). Mit 100vh liefe das Bild unten
+   aus dem sichtbaren Bereich. 100dvh trifft genau die sichtbaren 750px.
+   85vh davor als Rueckfall fuer Browser ohne dvh — bewusst konservativ,
+   damit dort nichts abgeschnitten wird.
+
+   Ab 769px, damit die Handy-Werte unangetastet bleiben. */
+@media (min-width: 769px) and (hover: none) and (pointer: coarse) {
+    .lb-image-wrapper,
+    .lb-image-wrapper img {
+        max-width: 100%;
+        max-height: 85vh;
+        max-height: 100dvh;
+    }
+}
+
+
+/* ── Swipe-up hint (Touch only) ── */
+.lb-swipe-hint {
+    display: none;
+}
+
+@media (pointer: coarse) {
+    .lb-swipe-hint {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        position: absolute;
+        bottom: calc(56px + var(--inset-bottom, 0px));
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255,255,255,0.45);
+        font-size: 0.7rem;
+        pointer-events: none;
+        z-index: 10;
+        transition: opacity 0.4s;
+    }
+    .lb-swipe-hint::before {
+        content: '';
+        display: block;
+        width: 32px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(255,255,255,0.35);
+    }
+    .lb-swipe-hint.hidden {
+        opacity: 0;
+    }
+}
+
+/* ── Sidebar drag handle + compact top (mobile) ── */
+@media (max-width: 768px) {
+    .lb-sidebar { padding-top: 1rem; }
+    .lb-sidebar > h3 {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    .lb-sidebar::before {
+        content: '';
+        display: block;
+        width: 36px;
+        height: 4px;
+        border-radius: 2px;
+        background: rgba(255,255,255,0.25);
+        margin: 0 auto 0.75rem;
+    }
+}
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+    transition: background 0.2s;
+}
+
+.photo-item:hover .video-play-icon {
+    background: rgba(0, 0, 0, 0.78);
+}
+
+/* ── Video-Modal ── */
+.video-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.88);
+    align-items: center;
+    justify-content: center;
+}
+
+.video-modal.active {
+    display: flex;
+}
+
+.video-modal-inner {
+    position: relative;
+    width: 90vw;
+    max-width: 1200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-modal-inner video {
+    width: 100%;
+    max-height: 85vh;
+    border-radius: 4px;
+    background: #000;
+}
+
+.video-modal-close {
+    position: absolute;
+    top: -36px;
+    right: 0;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 6px;
+    opacity: 0.8;
+}
+
+.video-modal-close:hover {
+    opacity: 1;
+}
+
+/* ═══════════════════════════════════════════
+   Lightbox — Foto-Editor
+   ═══════════════════════════════════════════ */
+
+/* ── Bearbeiten + Löschen in Bottom-Controls ── */
+.lb-btn-edit {
+    padding: 10px 20px;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    border-radius: 24px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    backdrop-filter: blur(10px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.lb-btn-edit:hover { background: rgba(255,255,255,0.28); }
+.lb-btn-edit svg { width: 16px; height: 16px; flex-shrink: 0; }
+.lb-btn-edit .btn-label { display: inline; }
+
+.lb-btn-delete {
+    padding: 10px 16px;
+    background: rgba(180,30,30,0.55);
+    border: none;
+    border-radius: 24px;
+    color: #fff;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    backdrop-filter: blur(10px);
+}
+.lb-btn-delete:hover { background: rgba(211,47,47,0.85); }
+.lb-btn-delete svg { width: 18px; height: 18px; display: block; }
+
+/* ── Editor-Overlay ── */
+.lb-editor {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    background: #000;
+    flex-direction: column;
+    overflow: hidden;
+}
+.lb-editor.active { display: flex; }
+
+/* ── Top-Bar ── */
+.lb-editor-topbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    flex-shrink: 0;
+    gap: 6px;
+    background: rgba(0,0,0,0.85);
+    z-index: 10;
+}
+
+.lb-editor-cancel {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    border-radius: 18px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+.lb-editor-cancel:hover { background: rgba(255,255,255,0.2); }
+
+.lb-editor-title {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.45);
+    flex: 1;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+/* Undo/Redo */
+.lb-editor-history {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.lb-editor-hist-btn {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    border-radius: 18px;
+    color: #fff;
+    font-size: 1rem;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+.lb-editor-hist-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+.lb-editor-hist-btn:disabled { opacity: 0.25; cursor: default; }
+.lb-editor-hist-btn svg { width: 18px; height: 18px; display: block; }
+
+.lb-editor-save {
+    background: #2E75B6;
+    border: none;
+    border-radius: 18px;
+    color: #fff;
+    font-size: 0.85rem;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background 0.2s, opacity 0.2s;
+    white-space: nowrap;
+}
+.lb-editor-save:hover  { background: #3a8fd1; }
+.lb-editor-save:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Bild-Bereich: füllt alles zwischen Top-Bar und Bottom-Panel ── */
+.lb-editor-image-area {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#lb-editor-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: transform 0.25s ease, filter 0.15s ease;
+    user-select: none;
+    pointer-events: none;
+    display: block;
+}
+
+/* ── Gitter-Overlay ── */
+.lb-editor-grid {
+    /* Zwei Ebenen: Drittel-Linien fuer den Bildaufbau, ein feines Raster zum
+       Ausrichten. Das feine stand bis 13.09.2026 auf 18 Feldern und 0.2
+       Deckkraft — auf hellem Himmel war es unsichtbar, und zum Ausrichten am
+       Horizont zu weitmaschig. Jetzt etwas kraeftiger, und waehrend
+       am Neigeregler gezogen wird doppelt so eng (Klasse .fine). */
+    --grid-fine:  5.555%;
+    --grid-alpha: 0.28;
+    display: none;
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.55) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.55) 1px, transparent 1px),
+        linear-gradient(rgba(255,255,255,var(--grid-alpha)) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,var(--grid-alpha)) 1px, transparent 1px);
+    background-size:
+        33.33% 33.33%,
+        33.33% 33.33%,
+        var(--grid-fine) var(--grid-fine),
+        var(--grid-fine) var(--grid-fine);
+}
+.lb-editor-grid.visible { display: block; }
+
+/* Waehrend des Ausrichtens: 36 Felder statt 18, deutlich sichtbar. Eine
+   Linie alle 2,8 % der Bildhoehe — damit laesst sich ein Horizont auf ein
+   Zehntelgrad genau gegen eine Kante legen. */
+.lb-editor-grid.fine {
+    --grid-fine:  2.777%;
+    --grid-alpha: 0.42;
+}
+
+/* ── Crop-Overlay ── */
+.lb-editor-crop-overlay {
+    position: absolute;
+    /* top/left/width/height werden beim Aktivieren per JS gesetzt,
+       damit das Overlay exakt über dem sichtbaren Bild sitzt. */
+    z-index: 6;
+    touch-action: none;
+    user-select: none;
+    contain: layout;    /* Isolation gegenüber Ancestor-Layout */
+    /* Kein overflow:hidden — Handles dürfen am Bildrand hinausstehen */
+}
+.lb-editor-crop-dim {
+    position: absolute;
+    background: rgba(0,0,0,0.6);
+    pointer-events: none;
+}
+.lb-editor-crop-rect {
+    position: absolute;
+    border: 2px solid #2E75B6;    /* MPD-Blau — konsistent mit Drag/Drop-Highlight */
+    cursor: move;
+    box-sizing: border-box;
+}
+.lb-editor-crop-rect::before,
+.lb-editor-crop-rect::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+.lb-editor-crop-rect::before {
+    background-image:
+        linear-gradient(rgba(255,255,255,0.4) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.4) 1px, transparent 1px);
+    background-size: 33.333% 33.333%;
+    background-position: 0 0;
+}
+.lb-editor-crop-handle {
+    position: absolute;
+    width: 18px; height: 18px;
+    background: #2E75B6;          /* MPD-Blau, massiv gefüllt */
+    border: 2px solid #fff;       /* weiße Outline gegen dunkle Bildbereiche */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    border-radius: 3px;
+    box-sizing: border-box;
+}
+.lb-editor-crop-handle.nw { top: -9px;    left: -9px;   cursor: nwse-resize; }
+.lb-editor-crop-handle.ne { top: -9px;    right: -9px;  cursor: nesw-resize; }
+.lb-editor-crop-handle.sw { bottom: -9px; left: -9px;   cursor: nesw-resize; }
+.lb-editor-crop-handle.se { bottom: -9px; right: -9px;  cursor: nwse-resize; }
+
+/* Reset-Button im Topbar/Desktop-Header (orange Akzent — destruktive Aktion) */
+.lb-editor-reset-btn {
+    color: #ffab70 !important;
+}
+.lb-editor-reset-btn:hover {
+    color: #ff8c42 !important;
+}
+
+/* Breite Kachel — Aktionen-Panel hat nur noch "Zuschneiden & Drehen" */
+.lb-editor-tile.lb-editor-tile-wide {
+    flex-direction: row;
+    padding: 14px 24px;
+    font-size: 1.15rem;
+    gap: 10px;
+}
+.lb-editor-tile.lb-editor-tile-wide span.label {
+    font-size: 0.88rem;
+    color: rgba(255,255,255,0.85);
+}
+
+/* ── Crop-Mode: Vollmodus der den Editor temporär übernimmt ── */
+/* Crop-Footer ist IMMER am unteren Rand absolut positioniert — egal ob
+   Desktop oder Mobile. Default hidden, nur im Crop-Mode sichtbar. */
+.lb-editor-crop-footer {
+    display: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px calc(10px + var(--inset-bottom, 0px));
+    background: rgba(0,0,0,0.92);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    z-index: 50;
+}
+.lb-editor.crop-mode .lb-editor-crop-footer { display: flex !important; }
+.lb-editor.crop-mode .lb-editor-bottom     { display: none !important; }
+.lb-editor.crop-mode .lb-editor-topbar     { display: none !important; }
+.lb-editor.crop-mode #lb-editor-img        { transition: none !important; }
+.lb-editor.crop-mode .lb-editor-image-area {
+    /* Unten so viel Platz, wie der Footer wirklich braucht. Die Hoehe misst
+       _syncCropFooterHeight() und setzt sie als --crop-footer-h; 72px sind nur
+       der Rueckfall, falls das Messen ausfaellt. Vorher stand hier der feste
+       Wert — im WebView kam zur 50px-Neigeskala die Systemleiste dazu, und der
+       Footer verdeckte die unteren Anfasspunkte (13.09.2026). */
+    /* +26px: die Ecken-Griffe sitzen mit bottom:-9px auf der Rahmenkante und
+       ragen also nach unten hinaus. 14px waren zu knapp — der Griff klebte am
+       Footer und liess sich mit dem Finger nicht fassen (13.09.2026).
+       26px lassen den Griff frei plus Fingerabstand. */
+    padding: 40px 40px calc(var(--crop-footer-h, 72px) + 26px);
+}
+
+/* Crop-Rahmen + Handles mit expliziten Z-Indices gegen Dim-Divs */
+.lb-editor-crop-rect   { z-index: 2; }
+.lb-editor-crop-dim    { z-index: 1; }
+.lb-editor-crop-handle { z-index: 3; }
+
+.lb-editor-crop-rotations {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+/* Drei Rotate-Buttons als segmentiertes Pill — wirken als ein Cluster
+   statt drei verstreute Knöpfe. */
+.lb-editor-crop-rotbtn-group {
+    display: inline-flex;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.lb-editor-crop-rotbtn {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    color: #fff;
+    font-size: 1.2rem;
+    width: 38px; height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.lb-editor-crop-rotbtn + .lb-editor-crop-rotbtn {
+    border-left: 1px solid rgba(255,255,255,0.12);
+}
+.lb-editor-crop-rotbtn:hover { background: rgba(255,255,255,0.15); }
+
+.lb-editor-crop-straighten {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    flex: 1 1 auto;
+    min-width: 220px;
+}
+
+/* ── Tilt-Skala (iOS-Stil): Pointer fix mittig, Skala scrollt drunter ── */
+.lb-tilt-scale {
+    --range: 45;
+    --pixels-per-deg: 8;
+    --value: 0;
+    position: relative;
+    height: 50px;
+    overflow: hidden;
+    user-select: none;
+    cursor: grab;
+    touch-action: none;
+}
+.lb-tilt-scale:active { cursor: grabbing; }
+.lb-tilt-scale-track {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(calc(-50% - calc(var(--value) * var(--pixels-per-deg) * 1px)));
+    width: calc(var(--range) * 2 * var(--pixels-per-deg) * 1px);
+    height: 100%;
+    will-change: transform;
+    transition: transform 0.06s linear;
+}
+.lb-tilt-scale-track.dragging { transition: none; }
+
+.lb-tilt-scale-numbers { position: relative; height: 18px; margin-bottom: 4px; }
+.lb-tilt-scale-num {
+    position: absolute;
+    top: 0;
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.5);
+    font-variant-numeric: tabular-nums;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+.lb-tilt-scale-num.zero {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    top: -3px;
+}
+.lb-tilt-scale-num.outer { color: rgba(255,255,255,0.22); }
+
+.lb-tilt-scale-ticks { position: relative; height: 14px; }
+.lb-tilt-scale-tick {
+    position: absolute;
+    top: 0;
+    width: 1px;
+    transform: translateX(-50%);
+}
+.lb-tilt-scale-tick.minor { height: 5px;  background: rgba(255,255,255,0.25); }
+.lb-tilt-scale-tick.major { height: 10px; background: rgba(255,255,255,0.7); }
+.lb-tilt-scale-tick.zero  { height: 14px; width: 2px; background: #fff; }
+
+.lb-tilt-scale-fade {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to right,
+        rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.85) 6%, transparent 22%,
+        transparent 78%, rgba(0,0,0,0.85) 94%, rgba(0,0,0,0.92) 100%);
+}
+.lb-tilt-scale-pointer {
+    position: absolute;
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #fff;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.lb-tilt-scale-readout {
+    text-align: center;
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.65);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+.lb-tilt-scale-readout strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+/* Legacy-Range-Style — nicht mehr verwendet, bleibt für alle anderen
+   range-Inputs in dem Editor (z.B. Belichtungs-Slider) erhalten. */
+.lb-editor-crop-straighten input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 3px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+.lb-editor-crop-straighten input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    cursor: pointer;
+}
+.lb-editor-crop-straighten input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+
+/* ── Bottom-Panel: schwebt als Overlay über Bild-Unterkante ── */
+.lb-editor-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.82) 28%, rgba(0,0,0,0.95));
+    padding-top: 32px;
+    z-index: 5;
+}
+
+/* Straighten-Slider — unten, volle Breite, über Status */
+.lb-editor-straighten {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 20px 4px;
+    gap: 4px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    background: rgba(0,0,0,0.3);
+}
+.lb-editor-straighten.visible { display: flex; }
+
+.lb-editor-straighten-row {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+}
+.lb-editor-straighten-val {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.65);
+    min-width: 32px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.lb-editor-straighten input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 3px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 2px;
+    outline: none;
+    padding: 10px 0;
+    margin: -10px 0;
+    cursor: pointer;
+}
+.lb-editor-straighten input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    cursor: pointer;
+}
+.lb-editor-straighten input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+.lb-editor-straighten-hint {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.3);
+}
+
+/* Kontext-Buttons */
+.lb-editor-context {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 6px 16px;
+}
+.lb-editor-ctx-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1.2rem;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    min-width: 72px;
+}
+.lb-editor-ctx-btn span.label {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.55);
+    line-height: 1;
+}
+.lb-editor-ctx-btn:hover  { background: rgba(255,255,255,0.18); }
+.lb-editor-ctx-btn.active {
+    background: rgba(46,117,182,0.45);
+    border-color: rgba(46,117,182,0.8);
+    color: #7ec8ff;
+}
+.lb-editor-ctx-btn.active span.label { color: #7ec8ff; }
+.lb-editor-ctx-btn svg { width: 22px; height: 22px; }
+
+/* Tab-Bar */
+.lb-editor-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px 16px 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+.lb-editor-tabs::-webkit-scrollbar { display: none; }
+.lb-editor-tab {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+.lb-editor-tab:hover  { color: #fff; background: rgba(255,255,255,0.08); }
+.lb-editor-tab.active {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Tab-Panels */
+.lb-editor-panel { display: none; padding: 6px 12px 10px; }
+.lb-editor-panel.active { display: block; }
+
+/* Kacheln */
+.lb-editor-tiles {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+}
+.lb-editor-tiles::-webkit-scrollbar { display: none; }
+.lb-editor-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.5rem;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    min-width: 72px;
+}
+.lb-editor-tile span.label {
+    font-size: 0.68rem;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+}
+.lb-editor-tile:hover  { background: rgba(255,255,255,0.18); }
+.lb-editor-tile:active { background: rgba(46,117,182,0.45); }
+.lb-editor-tile svg { width: 26px; height: 26px; }
+
+/* Schieberegler Belichtung */
+.lb-editor-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 2px 4px 0;
+}
+.lb-editor-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.lb-editor-slider-row label {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.6);
+    min-width: 76px;
+}
+.lb-editor-slider-row input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    outline: none;
+    padding: 10px 0;
+    margin: -10px 0;
+    cursor: pointer;
+}
+.lb-editor-slider-row input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    cursor: pointer;
+}
+.lb-editor-slider-row input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #2E75B6;
+    border: 2px solid #fff;
+    cursor: pointer;
+}
+.lb-editor-slider-row input[type=range]::-webkit-slider-runnable-track {
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+}
+.lb-editor-slider-row .slider-val {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.65);
+    min-width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Status */
+.lb-editor-status {
+    font-size: 0.75rem;
+    text-align: center;
+    padding: 4px 16px;
+    padding-bottom: calc(6px + var(--inset-bottom, 0px));
+    min-height: 18px;
+    color: rgba(255,255,255,0.45);
+}
+
+/* Smartphone-Hinweis */
+.lb-editor-mobile-hint {
+    display: none;
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.35);
+    text-align: center;
+    padding: 4px 16px 2px;
+}
+
+/* ── Desktop-Sidebar-Layout (≥1024px, nur mit Maus) ──
+   `hover: hover` + `pointer: fine` schließt Tablets aus, die im Querformat
+   ebenfalls über 1024px liegen. */
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+    .lb-editor.active {
+        flex-direction: row;
+    }
+    .lb-editor-image-area {
+        flex: 1;
+        height: 100%;
+    }
+    .lb-editor-topbar {
+        display: none; /* Wird in Sidebar eingebaut */
+    }
+    .lb-editor-bottom {
+        position: relative;
+        width: 300px;
+        max-width: 300px;
+        min-width: 0;
+        flex-shrink: 0;
+        background: #141414;
+        border-left: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        flex-direction: column;
+        padding-top: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+    overscroll-behavior: contain;
+    }
+    .lb-editor-desktop-header {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px 16px 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .lb-editor-desktop-title {
+        font-size: 0.78rem;
+        color: rgba(255,255,255,0.4);
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .lb-editor-desktop-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .lb-editor-context {
+        padding: 12px 16px 8px;
+        justify-content: stretch;
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+    .lb-editor-ctx-btn {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 6px;
+    }
+    /* Label darf umbrechen wenn der Text länger ist als die Spalte
+       („Zuschneiden & Drehen" wird damit zweizeilig). */
+    .lb-editor-ctx-btn span.label {
+        text-align: center;
+        word-break: break-word;
+    }
+    .lb-editor-desktop-actions .lb-editor-cancel,
+    .lb-editor-desktop-actions .lb-editor-save {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+    .lb-editor-desktop-actions .lb-editor-hist-btn {
+        width: 30px;
+        height: 30px;
+        font-size: 0.95rem;
+    }
+    .lb-editor-tabs {
+        padding: 8px 16px 6px;
+    }
+    .lb-editor-panel {
+        padding: 8px 16px 12px;
+    }
+    .lb-editor-status {
+        margin-top: auto;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding: 8px 16px;
+    }
+    .lb-editor-straighten {
+        padding: 0 16px 8px;
+    }
+}
+
+/* Desktop-Only Elemente standardmäßig ausblenden */
+.lb-editor-desktop-header { display: none; }
+
+/* ── Smartphone-Reduktion (<640px) ── */
+@media (max-width: 639px) {
+    .lb-editor-panel[data-panel="exposure"] { display: none !important; }
+    .lb-editor-tab[data-tab="exposure"]     { display: none; }
+    .lb-editor-context                      { display: none; }
+    .lb-editor-mobile-hint                  { display: block; }
+    .lb-editor-tiles { gap: 12px; }
+    .lb-editor-tile  { padding: 14px 24px; font-size: 1.6rem; }
+    .lb-btn-edit .btn-label { display: none; }
+    .lb-btn-edit { padding: 10px 14px; }
+}
+
+/* ── Tablet-Anpassungen ──
+   Gilt ab 640px für Breiten bis 1023px und darüber hinaus für jedes
+   Berührungsgerät — sonst fiele das Tablet im Querformat heraus.
+   Die Reduktionen unter 640px bleiben dem Handy vorbehalten: das Tablet
+   hat den Platz und behält damit z. B. den Belichtungs-Reiter. */
+@media (min-width: 640px) and (max-width: 1023px),
+       (min-width: 640px) and (hover: none) and (pointer: coarse) {
+    .lb-editor-bottom {
+        padding-top: 24px;
+    }
+}
+
+/* ============================================
+   TIPP AUFS BILD BLENDET DIE BEDIENUNG AUS
+   Ein Einzeltipp setzt `.chrome-hidden` auf die Lightbox-Wurzel
+   (Lightbox.toggleChrome). Alles Überlagernde verschwindet, das Foto
+   bleibt — wie man es von Foto-Apps kennt. Nächster Tipp holt es zurück.
+
+   Bewusst nur ausgeblendet, nicht entfernt: die Elemente behalten ihren
+   Platz im Layout, damit beim Wiedereinblenden nichts springt.
+   ============================================ */
+
+.lightbox.chrome-hidden .lb-mobile-topbar,
+.lightbox.chrome-hidden .lb-mobile-fab,
+.lightbox.chrome-hidden .lb-swipe-hint,
+.lightbox.chrome-hidden .lb-close,
+.lightbox.chrome-hidden .lb-nav,
+.lightbox.chrome-hidden .lb-bottom-controls,
+.lightbox.chrome-hidden .lb-counter {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+/* Beim Wiedereinblenden dieselbe Dauer, damit es sich symmetrisch anfühlt */
+.lightbox .lb-mobile-topbar,
+.lightbox .lb-mobile-fab,
+.lightbox .lb-swipe-hint,
+.lightbox .lb-close,
+.lightbox .lb-nav,
+.lightbox .lb-bottom-controls,
+.lightbox .lb-counter {
+    transition: opacity 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lightbox .lb-mobile-topbar,
+    .lightbox .lb-mobile-fab,
+    .lightbox .lb-swipe-hint,
+    .lightbox .lb-close,
+    .lightbox .lb-nav,
+    .lightbox .lb-bottom-controls,
+    .lightbox .lb-counter { transition: none; }
+}

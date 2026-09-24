@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/common"
+log "postuninst — Container, Image und docker/MPD/data entfernt der Worker; Fotos unberührt"
+exit 0

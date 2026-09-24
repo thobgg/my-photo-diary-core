@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <title>Album | My Photo Diary</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css?v=8">
+    <link rel="stylesheet" href="/css/lightbox.css?v=5">
+    <link rel="stylesheet" href="/css/edit-core.css?v=20">
+    <link rel="stylesheet" href="/css/edit-text.css?v=5">
+    <link rel="stylesheet" href="/css/edit-photo.css?v=9">
+    <link rel="stylesheet" href="/css/edit-media.css?v=9">
+    <link rel="stylesheet" href="/css/companion.css">
+    <link rel="stylesheet" href="/css/album-share.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet.geodesic@2.7.1/dist/leaflet.geodesic.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("mpd-theme")||"dark")</script>
+    <script src="/js/i18n.js?v=48"></script>
+    <script src="/js/version-watch.js?v=5"></script>
+    <!-- Share / Mail / Contacts modals — shared with index.html -->
+    <script src="/js/album-share.js?v=4"></script>
+</head>
+<body>
+    <!-- Mobile-Hero: große Titel-Cover-Section (collapsing-toolbar Pattern).
+         Auf Desktop per CSS ausgeblendet. Im Edit-Mode auch ausgeblendet,
+         damit der Titel-Input in der Header-Leiste die Führung übernimmt.
+         Steht VOR dem Header, damit auf Phone der Hero edge-to-edge oben
+         anfängt und der sticky Header erst beim Scrollen „einfliegt". -->
+    <section id="album-hero" class="album-hero">
+        <!-- Letterbox-Blur Pattern (Apple-Music): hinten cover-fit + Blur als
+             farbige Aura, vorne contain-fit damit das Bild bei Hochkant nicht
+             beschnitten wird. Beide Layer kriegen dieselbe Bild-URL. -->
+        <div class="album-hero-blur"  id="album-hero-blur"></div>
+        <div class="album-hero-cover" id="album-hero-cover"></div>
+        <div class="album-hero-gradient"></div>
+        <div class="album-hero-content">
+            <h2 class="album-hero-title" id="album-hero-title"></h2>
+            <div class="album-hero-meta" id="album-hero-meta"></div>
+        </div>
+        <div class="album-hero-sentinel" aria-hidden="true"></div>
+    </section>
+
+    <!-- Phone-Overlay-Controls (Google-Photos-Pattern):
+         Zurück oben links, Kebab oben rechts, primärer Bearbeiten-Button
+         unten-mittig. Alle fixed-positioned über Hero und Content.
+         Desktop + Edit-Mode (Teile davon) werden per CSS ausgeblendet. -->
+    <a href="/" id="album-back-btn" class="album-back-btn" data-i18n-attr="aria-label:album.back_title,title:album.back_title" aria-label="Zur Startseite" title="Zur Startseite" onclick="goBack(); return false;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 12H5"/>
+            <path d="M12 19l-7-7 7-7"/>
+        </svg>
+    </a>
+    <button id="album-kebab-btn" class="album-kebab-btn" data-i18n-attr="aria-label:album.kebab_title" aria-label="Album-Menü" onclick="toggleAlbumKebab(event)">
+        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.6"/>
+            <circle cx="12" cy="12" r="1.6"/>
+            <circle cx="12" cy="19" r="1.6"/>
+        </svg>
+    </button>
+    <div id="album-kebab-menu" class="album-kebab-menu" hidden>
+        <!-- Teilen — öffnet das Share-Modal aus album-share.js (geteilt mit
+             index.html). Bekommt Album-Identität aus albumData + albumName. -->
+        <button class="album-kebab-item" onclick="closeAlbumKebab(); _openMobileShare();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <span data-i18n="album.kebab_share">Teilen</span>
+        </button>
+        <!-- PDF erzeugen — Roadmap-Platzhalter (analog Lightbox-Mobile-Kebab) -->
+        <button class="album-kebab-item album-kebab-item-disabled" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="13" x2="15" y2="13"/>
+                <line x1="9" y1="17" x2="15" y2="17"/>
+            </svg>
+            <span data-i18n="album.kebab_pdf">PDF erzeugen</span>
+            <span class="album-kebab-soon" data-i18n="album.kebab_soon">bald</span>
+        </button>
+        <!-- Private Elemente ein/aus — auf Phone sonst nicht erreichbar
+             (#locked-toggle ist via @media ≤480px ausgeblendet). Zwei SVGs
+             im DOM, eine sichtbar via .is-locked-Klasse — gleiche Mechanik
+             wie der Desktop-Header-Toggle. Klasse wird in album-render.js
+             pro Render gesetzt. -->
+        <button id="album-kebab-locked" class="album-kebab-item" onclick="closeAlbumKebab(); toggleShowLocked();">
+            <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+            </svg>
+            <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" fill="currentColor"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            <span class="kebab-locked-label-show" data-i18n="album.kebab_locked_hide">Private ausblenden</span>
+            <span class="kebab-locked-label-hide" data-i18n="album.kebab_locked_show">Private einblenden</span>
+        </button>
+        <button class="album-kebab-item" onclick="closeAlbumKebab(); toggleThemePicker();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/>
+                <circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/>
+                <circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/>
+                <circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/>
+                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>
+            </svg>
+            <span data-i18n="album.kebab_theme">Theme</span>
+        </button>
+        <!-- Kalender — kleines Monats-Widget zum Wochentag-Nachschauen beim
+             Album-Gestalten. Öffnet sich im Monat der Album-Datumsspanne. -->
+        <button class="album-kebab-item" onclick="closeAlbumKebab(); _openCalendarDialog();">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span data-i18n="album.kebab_calendar">Kalender</span>
+        </button>
+    </div>
+    <script>
+        // Share-Modal aus album.html aufrufen — albumData + albumName + albumSpace
+        // sind globale Variablen aus album-state.js. Bauen daraus den Album-Stub,
+        // den _openAlbumShareModal aus album-share.js erwartet.
+        function _openMobileShare() {
+            if (typeof window._openAlbumShareModal !== 'function') return;
+            window._openAlbumShareModal({
+                name : (typeof albumName  !== 'undefined') ? albumName  : '',
+                space: (typeof albumSpace !== 'undefined') ? albumSpace : 'shared',
+                title: (typeof albumData !== 'undefined' && albumData?.meta?.title) ? albumData.meta.title : '',
+            });
+        }
+
+        // Kalender-Widget — kleines Monats-Raster zum Wochentag-Nachschauen
+        // beim Album-Gestalten. Leitet die Datumsspanne aus den Foto-Dateinamen
+        // (ISO-Datum) ab, öffnet im passenden Monat, markiert Album-Tage + heute.
+        function _openCalendarDialog() {
+            const en     = window.MPD_I18N && window.MPD_I18N.getLang && window.MPD_I18N.getLang() === 'en';
+            const locale = en ? 'en-GB' : 'de-DE';
+            const _strip = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+            function albumRange() {
+                const els = (typeof albumData !== 'undefined' && albumData && albumData.elements) || [];
+                const ds = [];
+                for (const e of els) {
+                    if (e.type !== 'photo' || !e.file) continue;
+                    const m = e.file.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                    if (m) ds.push(new Date(+m[1], +m[2] - 1, +m[3]));
+                }
+                if (!ds.length) return null;
+                ds.sort((a, b) => a - b);
+                return { min: _strip(ds[0]), max: _strip(ds[ds.length - 1]) };
+            }
+
+            const range = albumRange();
+            const today = _strip(new Date());
+            let view = range ? new Date(range.min.getFullYear(), range.min.getMonth(), 1)
+                             : new Date(today.getFullYear(), today.getMonth(), 1);
+
+            const sameDay = (a, b) => a.getTime() === b.getTime();
+            const inRange = (d) => range && d >= range.min && d <= range.max;
+            const monthLabel = (d) => d.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+
+            function weekdayHeads() {
+                let html = '';
+                for (let i = 0; i < 7; i++) {            // 1.1.2024 = Montag → Mo-first
+                    const d = new Date(2024, 0, 1 + i);
+                    html += `<div class="mpd-cal-wd">${d.toLocaleDateString(locale, { weekday: 'short' })}</div>`;
+                }
+                return html;
+            }
+            function grid() {
+                const y = view.getFullYear(), m = view.getMonth();
+                const lead = (new Date(y, m, 1).getDay() + 6) % 7;   // Montag = 0
+                const start = new Date(y, m, 1 - lead);
+                let html = '';
+                for (let i = 0; i < 42; i++) {
+                    const d = _strip(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+                    const cls = ['mpd-cal-day'];
+                    if (d.getMonth() !== m) cls.push('is-out');
+                    if (inRange(d))         cls.push('is-album');
+                    if (sameDay(d, today))  cls.push('is-today');
+                    html += `<div class="${cls.join(' ')}">${d.getDate()}</div>`;
+                }
+                return html;
+            }
+
+            const dlg = document.createElement('dialog');
+            dlg.className = 'mpd-dialog mpd-cal';
+            const legend = range
+                ? `<span class="mpd-cal-dot dot-album"></span>${en ? 'Album days' : 'Album-Tage'} · <span class="mpd-cal-dot dot-today"></span>${en ? 'Today' : 'Heute'}`
+                : `<span class="mpd-cal-dot dot-today"></span>${en ? 'Today' : 'Heute'}`;
+            dlg.innerHTML =
+                `<div class="mpd-dialog__inner">
+                    <div class="mpd-cal-head">
+                        <button class="mpd-cal-nav" data-nav="-1" aria-label="‹">‹</button>
+                        <div class="mpd-cal-month"></div>
+                        <button class="mpd-cal-nav" data-nav="1" aria-label="›">›</button>
+                    </div>
+                    <div class="mpd-cal-grid"></div>
+                    <div class="mpd-cal-legend">${legend}</div>
+                    <div class="mpd-dialog__actions">
+                        ${range ? `<button class="mpd-dialog__btn mpd-dialog__btn--cancel" data-jump="album">Album</button>` : ``}
+                        <button class="mpd-dialog__btn mpd-dialog__btn--cancel" data-jump="today">${en ? 'Today' : 'Heute'}</button>
+                        <button class="mpd-dialog__btn mpd-dialog__btn--confirm" data-close="1">${en ? 'Close' : 'Schließen'}</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(dlg);
+
+            function render() {
+                dlg.querySelector('.mpd-cal-month').textContent = monthLabel(view);
+                dlg.querySelector('.mpd-cal-grid').innerHTML = weekdayHeads() + grid();
+            }
+            render();
+
+            const close = () => { try { dlg.close(); } catch (_) {} setTimeout(() => dlg.remove(), 160); };
+            dlg.addEventListener('click', (e) => {
+                const nav = e.target.closest('[data-nav]');
+                if (nav) { view = new Date(view.getFullYear(), view.getMonth() + (+nav.dataset.nav), 1); render(); return; }
+                const jump = e.target.closest('[data-jump]');
+                if (jump) {
+                    const t = (jump.dataset.jump === 'album' && range) ? range.min : today;
+                    view = new Date(t.getFullYear(), t.getMonth(), 1); render(); return;
+                }
+                if (e.target.closest('[data-close]')) { close(); return; }
+                if (e.target === dlg) close();
+            });
+            dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+            dlg.showModal();
+        }
+    </script>
+    <button id="album-primary-fab" class="album-primary-fab" data-i18n-attr="aria-label:album.primary_fab_title" aria-label="Bearbeiten" onclick="document.getElementById('edit-mode-toggle').click();">
+        <!-- Zwei SVG-Icons; CSS blendet das passende ein je nach body.edit-mode-active.
+             Saubere Line-Art statt Emoji — renderunabhängig, skaliert crisp. -->
+        <svg class="album-fab-icon album-fab-icon-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+        <svg class="album-fab-icon album-fab-icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+        </svg>
+    </button>
+
+    <header class="album-header">
+        <div class="header-left">
+            <a href="/" class="header-brand" data-i18n-attr="title:album.back_title" title="Zur Startseite" onclick="goBack(); return false;">
+                <img class="header-icon" src="/img/brand/mpd-logo.svg" alt="My Photo Diary">
+                <div class="header-titles">
+                    <span class="header-name">My Photo Diary</span>
+                    <span class="header-name-short">MPD</span>
+                    <span class="header-slogan">where your memories stay yours.</span>
+                </div>
+            </a>
+        </div>
+    
+        <div class="header-center">
+            <h1 id="album-title" data-i18n="album.title_loading">Album wird geladen...</h1>
+            <div class="album-subline">
+                <span id="album-meta" class="album-meta"></span>
+                <span id="album-count" class="album-count"></span>
+            </div>
+            <p id="edit-save-status" class="edit-save-status hidden"></p>
+        </div>
+    
+        <div class="header-right">
+            <button id="locked-toggle" class="icon-button" data-i18n-attr="title:album.locked_toggle_title" title="Private Elemente ein-/ausblenden" onclick="toggleShowLocked()">
+                <svg class="icon-unlocked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                </svg>
+                <svg class="icon-locked" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="11" width="18" height="11" rx="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+            </button>
+            <button id="theme-btn" class="icon-button" data-i18n-attr="title:album.theme_btn_title" title="Theme wechseln" onclick="toggleThemePicker()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/>
+                    <circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/>
+                    <circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/>
+                    <circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/>
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>
+                </svg>
+            </button>
+            <!-- Kalender — auch in der Kopfzeile (Desktop + Tablet, View & Edit),
+                 nicht nur im mobilen Kebab. Öffnet dasselbe _openCalendarDialog(). -->
+            <button id="calendar-btn" class="icon-button" data-i18n-attr="title:album.kebab_calendar" title="Kalender" onclick="_openCalendarDialog()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+            </button>
+            <button id="thumbnail-change-btn" class="icon-button hidden" data-i18n-attr="title:album.thumbnail_btn_title" title="Album-Titelbild ändern" onclick="openThumbnailModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="9" cy="9" r="2"/>
+                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                </svg>
+            </button>
+            <button id="undo-btn" class="icon-button edit-header-btn hidden" disabled data-i18n-attr="title:album.undo_title" title="Rückgängig (Strg+Z)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 7v6h6"/>
+                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                </svg>
+            </button>
+            <button id="redo-btn" class="icon-button edit-header-btn hidden" disabled data-i18n-attr="title:album.redo_title" title="Wiederherstellen (Strg+Umschalt+Z)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 7v6h-6"/>
+                    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+                </svg>
+            </button>
+            <button id="edit-mode-toggle" class="icon-button edit-toggle">
+                <svg class="edit-icon-pencil" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+                <svg class="edit-icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span class="button-label" id="edit-label" data-i18n="album.edit_label_edit">Bearbeiten</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="edit-mode-banner" class="edit-mode-banner hidden" style="display:none!important"></div>
+
+    <div class="container">
+        <div id="content"><div class="loading" data-i18n="album.loading_content">Lade Album...</div></div>
+        <footer class="album-footer">
+            <p>My Photo Diary &middot; where your memories stay yours.</p>
+            <p>&copy; 2026 Thomas Bugge &middot; <span class="mpd-version-text"></span></p>
+        </footer>
+    </div>
+
+    <!-- Universal FAB + Speed-Dial.
+         Auf Phone: Text + Foto sind primär („unterwegs schnell Erinnerungen"),
+         Rest kommt über „Mehr ▾". Auf Tablet/Desktop alles direkt sichtbar. -->
+    <div id="fab-container" class="fab-container hidden">
+        <div id="fab-menu" class="fab-menu" style="display:none;">
+            <button class="fab-menu-item" onclick="fabAction('text')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="4 7 4 4 20 4 20 7"/>
+                        <line x1="9" y1="20" x2="15" y2="20"/>
+                        <line x1="12" y1="4" x2="12" y2="20"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_text">Text</span>
+            </button>
+            <button class="fab-menu-item" onclick="fabAction('photo')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_photo">Foto / Video</span>
+            </button>
+            <button class="fab-menu-item fab-more-toggle" type="button" onclick="toggleFabMore()">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <circle cx="5" cy="12" r="1.6"/>
+                        <circle cx="12" cy="12" r="1.6"/>
+                        <circle cx="19" cy="12" r="1.6"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" id="fab-more-label" data-i18n="album.fab_more">Mehr</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('separator')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_separator">Separator</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('map')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                        <line x1="8" y1="2" x2="8" y2="18"/>
+                        <line x1="16" y1="6" x2="16" y2="22"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_map">Karte</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('audio')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_audio">Audio</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('document')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="9" y1="13" x2="15" y2="13"/>
+                        <line x1="9" y1="17" x2="15" y2="17"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_document">Dokument</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('link')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_link">Web-Link</span>
+            </button>
+            <button id="fab-item-tour" class="fab-menu-item fab-advanced" onclick="fabAction('tour')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="6" cy="19" r="3"/>
+                        <path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>
+                        <circle cx="18" cy="5" r="3"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_tour">Tour (GPX)</span>
+            </button>
+            <button class="fab-menu-item fab-advanced" onclick="fabAction('mixed')">
+                <span class="fab-menu-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                    </svg>
+                </span>
+                <span class="fab-menu-label" data-i18n="album.fab_mixed">Foto aus anderem Album</span>
+            </button>
+        </div>
+        <button id="fab-main" class="fab-main" onclick="toggleFabMenu()" data-i18n-attr="title:album.fab_main_title" title="Element hinzufügen">
+            <span id="fab-main-icon" class="fab-main-icon">+</span>
+        </button>
+    </div>
+    <div id="fab-backdrop" class="fab-backdrop hidden" onclick="closeFabMenu()"></div>
+    
+    <div class="lightbox" id="lightbox">
+        <div class="lb-container">
+            <div class="lb-main">
+                <button class="lb-close" onclick="closeLightbox()" aria-label="Schließen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+                <button class="lb-nav lb-prev" onclick="navigate(-1)" aria-label="Vorheriges">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                </button>
+                <button class="lb-nav lb-next" onclick="navigate(1)" aria-label="Nächstes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                </button>
+
+                <!-- Mobile/Tablet (<1024px): Topbar mit Zurück, Datum/Zeit/Ort, Kebab.
+                     Verdrängt auf Touch-Geräten Close + Nav-Pfeile + Bottom-Buttons. -->
+                <div class="lb-mobile-topbar" id="lb-mobile-topbar">
+                    <button class="lb-mobile-back" onclick="closeLightbox()" data-i18n-attr="aria-label:lightbox.mobile_back" aria-label="Zurück">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 12H5"/>
+                            <path d="M12 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
+                    <div class="lb-mobile-meta">
+                        <div class="lb-mobile-date" id="lb-mobile-date"></div>
+                        <div class="lb-mobile-subline" id="lb-mobile-subline"></div>
+                    </div>
+                    <button class="lb-mobile-kebab" id="lb-mobile-kebab-btn" onclick="window.lightbox.toggleMobileKebab(event)" data-i18n-attr="aria-label:lightbox.mobile_menu" aria-label="Menü">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <circle cx="12" cy="5" r="1.6"/>
+                            <circle cx="12" cy="12" r="1.6"/>
+                            <circle cx="12" cy="19" r="1.6"/>
+                        </svg>
+                    </button>
+                    <div class="lb-mobile-kebab-menu" id="lb-mobile-kebab-menu" hidden>
+                        <button class="lb-mobile-kebab-item" id="lb-mobile-download" onclick="window.lightbox.kebabDownload()">
+                            <span class="lb-kebab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </span>
+                            <span data-i18n="lightbox.download">Herunterladen</span>
+                        </button>
+                        <button class="lb-mobile-kebab-item" id="lb-mobile-share" onclick="window.lightbox.kebabShare()" hidden>
+                            <span class="lb-kebab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="18" cy="5" r="3"/>
+                                    <circle cx="6" cy="12" r="3"/>
+                                    <circle cx="18" cy="19" r="3"/>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                </svg>
+                            </span>
+                            <span data-i18n="lightbox.share">Teilen</span>
+                        </button>
+                        <button class="lb-mobile-kebab-item lb-mobile-kebab-disabled" disabled title="Demnächst">
+                            <span class="lb-kebab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="9" y1="13" x2="15" y2="13"/>
+                                    <line x1="9" y1="17" x2="15" y2="17"/>
+                                </svg>
+                            </span>
+                            <span data-i18n="lightbox.export_pdf">PDF erzeugen</span>
+                            <span class="lb-kebab-soon" data-i18n="lightbox.coming_soon">bald</span>
+                        </button>
+                        <div class="lb-mobile-kebab-sep"></div>
+                        <button class="lb-mobile-kebab-item lb-mobile-kebab-danger" id="lb-mobile-trash" onclick="window.lightbox.kebabDelete()">
+                            <span class="lb-kebab-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                </svg>
+                            </span>
+                            <span data-i18n="lightbox.move_to_trash">In Papierkorb verschieben</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mobile/Tablet Edit-FAB — Look wie album-primary-fab: SVG-Stift, modern.
+                     Sichtbar nur wenn JPEG + nicht Read-Only (siehe _updateEditButtons). -->
+                <button class="lb-mobile-fab" id="lb-mobile-edit-fab" onclick="window.lightbox.openEditor()" data-i18n-attr="aria-label:lightbox.edit" aria-label="Bearbeiten">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                    </svg>
+                </button>
+
+                <div class="lb-image-wrapper" id="lb-image-wrapper" onclick="toggleZoom()">
+                    <img id="lb-img" src="" alt="">
+                    <video id="lb-video" controls preload="none" style="display:none;max-width:100%;max-height:90vh;"></video>
+                </div>
+                <div class="lb-bottom-controls">
+                    <div class="lb-counter" id="lb-counter"></div>
+                    <button class="lb-btn" id="slideshow-btn" onclick="toggleSlideshow()">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <polygon points="6 4 20 12 6 20 6 4"/>
+                        </svg>
+                        <span data-i18n="lightbox.slideshow">Slideshow</span>
+                    </button>
+                    <button class="lb-btn" onclick="toggleInfo()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="16" x2="12" y2="12"/>
+                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+                        </svg>
+                        <span data-i18n="lightbox.info">Info</span>
+                    </button>
+                    <button class="lb-btn" onclick="downloadImage()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7 10 12 15 17 10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        <span data-i18n="lightbox.download">Download</span>
+                    </button>
+                    <button class="lb-btn" id="lb-share-btn" onclick="window.lightbox.sharePhoto()" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                        </svg>
+                        <span data-i18n="lightbox.share">Teilen</span>
+                    </button>
+                    <button class="lb-btn-edit" id="lb-edit-btn" onclick="window.lightbox.openEditor()" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
+                        <span class="btn-label" data-i18n="lightbox.edit">Bearbeiten</span>
+                    </button>
+                    <button class="lb-btn-delete" id="lb-delete-btn" onclick="window.lightbox.deletePhoto()" style="display:none;" aria-label="Löschen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- ── Foto-Editor-Overlay ── -->
+                <div class="lb-editor" id="lb-editor">
+
+                    <!-- Top-Bar (Mobile + Tablet) -->
+                    <div class="lb-editor-topbar">
+                        <button class="lb-editor-cancel" onclick="window.lightbox.closeEditor()" data-i18n="lightbox.editor_cancel">Abbrechen</button>
+                        <span class="lb-editor-title" id="lb-editor-title" data-i18n="lightbox.editor_title">Bearbeiten</span>
+                        <div class="lb-editor-history">
+                            <button class="lb-editor-hist-btn" id="lb-undo-btn" onclick="window.lightbox.editorUndo()" data-i18n-attr="title:lightbox.editor_undo" title="Rückgängig" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 7v6h6"/>
+                                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                                </svg>
+                            </button>
+                            <button class="lb-editor-hist-btn" id="lb-redo-btn" onclick="window.lightbox.editorRedo()" data-i18n-attr="title:lightbox.editor_redo" title="Wiederholen" disabled>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 7v6h-6"/>
+                                    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+                                </svg>
+                            </button>
+                            <button class="lb-editor-hist-btn lb-editor-reset-btn" onclick="window.lightbox.resetToOriginal()" data-i18n-attr="title:lightbox.editor_reset" title="Zum Original">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                    <path d="M3 3v5h5"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <button class="lb-editor-save" id="lb-editor-save-btn" onclick="window.lightbox.saveEdit()" data-i18n="lightbox.editor_save">Speichern</button>
+                    </div>
+
+                    <!-- Bild-Bereich -->
+                    <div class="lb-editor-image-area">
+                        <img id="lb-editor-img" src="" alt="">
+                        <div class="lb-editor-grid" id="lb-editor-grid"></div>
+
+                        <!-- Crop-Overlay (nur im Crop-Modus sichtbar) -->
+                        <div class="lb-editor-crop-overlay" id="lb-editor-crop-overlay" style="display:none">
+                            <!-- 4 Dim-Divs (oben/rechts/unten/links um den Crop-Ausschnitt) -->
+                            <div class="lb-editor-crop-dim" data-dim="top"></div>
+                            <div class="lb-editor-crop-dim" data-dim="right"></div>
+                            <div class="lb-editor-crop-dim" data-dim="bottom"></div>
+                            <div class="lb-editor-crop-dim" data-dim="left"></div>
+                            <div class="lb-editor-crop-rect" id="lb-editor-crop-rect">
+                                <div class="lb-editor-crop-handle nw" data-handle="nw"></div>
+                                <div class="lb-editor-crop-handle ne" data-handle="ne"></div>
+                                <div class="lb-editor-crop-handle sw" data-handle="sw"></div>
+                                <div class="lb-editor-crop-handle se" data-handle="se"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom-Panel (schwebt über Bild auf Mobile/Tablet, Sidebar auf Desktop) -->
+                    <div class="lb-editor-bottom" id="lb-editor-bottom">
+
+                        <!-- Desktop-Header (nur ≥1024px sichtbar) -->
+                        <div class="lb-editor-desktop-header" id="lb-editor-desktop-header">
+                            <div class="lb-editor-desktop-title" id="lb-editor-desktop-title"></div>
+                            <div class="lb-editor-desktop-actions">
+                                <button class="lb-editor-cancel" onclick="window.lightbox.closeEditor()" data-i18n="lightbox.editor_cancel">Abbrechen</button>
+                                <div class="lb-editor-history">
+                                    <button class="lb-editor-hist-btn" id="lb-undo-btn-d" onclick="window.lightbox.editorUndo()" data-i18n-attr="title:lightbox.editor_undo" title="Rückgängig" disabled>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 7v6h6"/>
+                                            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                                        </svg>
+                                    </button>
+                                    <button class="lb-editor-hist-btn" id="lb-redo-btn-d" onclick="window.lightbox.editorRedo()" data-i18n-attr="title:lightbox.editor_redo" title="Wiederholen" disabled>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M21 7v6h-6"/>
+                                            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+                                        </svg>
+                                    </button>
+                                    <button class="lb-editor-hist-btn lb-editor-reset-btn" onclick="window.lightbox.resetToOriginal()" data-i18n-attr="title:lightbox.editor_reset" title="Zum Original">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                            <path d="M3 3v5h5"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <button class="lb-editor-save" id="lb-editor-save-btn-d" onclick="window.lightbox.saveEdit()" data-i18n="lightbox.editor_save">Speichern</button>
+                            </div>
+                        </div>
+
+                        <!-- Kontext-Buttons -->
+                        <div class="lb-editor-context">
+                            <button class="lb-editor-ctx-btn" id="lb-ctx-flip-h" onclick="window.lightbox.editorFlip('h')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/>
+                                    <path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/>
+                                    <path d="M12 20v2M12 14v2M12 8v2M12 2v2"/>
+                                </svg>
+                                <span class="label" data-i18n="lightbox.editor_flip_h">Spiegeln</span>
+                            </button>
+                            <button class="lb-editor-ctx-btn" id="lb-ctx-flip-v" onclick="window.lightbox.editorFlip('v')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3"/>
+                                    <path d="M21 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3"/>
+                                    <path d="M4 12H2M10 12H8M16 12h-2M22 12h-2"/>
+                                </svg>
+                                <span class="label" data-i18n="lightbox.editor_flip_v">Kippen</span>
+                            </button>
+                            <button class="lb-editor-ctx-btn" id="lb-ctx-crop" onclick="window.lightbox.openCropMode()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M6 2v14a2 2 0 0 0 2 2h14"/>
+                                    <path d="M18 22V8a2 2 0 0 0-2-2H2"/>
+                                </svg>
+                                <span class="label" data-i18n="lightbox.editor_tile_crop">Zuschneiden &amp; Drehen</span>
+                            </button>
+                        </div>
+
+                        <!-- Belichtungs-Slider (immer sichtbar) -->
+                        <div class="lb-editor-sliders">
+                            <div class="lb-editor-slider-row">
+                                <label data-i18n="lightbox.editor_brightness">Helligkeit</label>
+                                <input type="range" id="lb-sl-brightness" min="-100" max="100" step="1" value="0">
+                                <span class="slider-val" id="lb-sv-brightness">0</span>
+                            </div>
+                            <div class="lb-editor-slider-row">
+                                <label data-i18n="lightbox.editor_contrast">Kontrast</label>
+                                <input type="range" id="lb-sl-contrast" min="-100" max="100" step="1" value="0">
+                                <span class="slider-val" id="lb-sv-contrast">0</span>
+                            </div>
+                            <div class="lb-editor-slider-row">
+                                <label data-i18n="lightbox.editor_saturation">Sättigung</label>
+                                <input type="range" id="lb-sl-saturation" min="-100" max="100" step="1" value="0">
+                                <span class="slider-val" id="lb-sv-saturation">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Smartphone-Hinweis -->
+                        <div class="lb-editor-mobile-hint" data-i18n="lightbox.editor_mobile_hint">Vollständige Bearbeitung auf Tablet oder Desktop</div>
+
+                        <!-- Straighten-Slider (unten, über Status) -->
+                        <div class="lb-editor-straighten" id="lb-editor-straighten">
+                            <div class="lb-editor-straighten-row">
+                                <span class="lb-editor-straighten-val" id="lb-straighten-val">0°</span>
+                                <input type="range" id="lb-straighten-slider" min="-45" max="45" step="0.5" value="0">
+                            </div>
+                            <span class="lb-editor-straighten-hint" data-i18n="lightbox.editor_straighten_hint">Horizont begradigen</span>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="lb-editor-status" id="lb-editor-status"></div>
+                    </div>
+
+                    <!-- Crop-Footer (nur sichtbar im Crop-Mode) -->
+                    <div class="lb-editor-crop-footer" id="lb-editor-crop-footer">
+                        <button class="lb-editor-cancel" onclick="window.lightbox.closeCropMode(false)" data-i18n="lightbox.editor_cancel">Abbrechen</button>
+
+                        <div class="lb-editor-crop-rotations">
+                            <div class="lb-editor-crop-rotbtn-group">
+                                <button class="lb-editor-crop-rotbtn" onclick="window.lightbox.editorRotate(270)" data-i18n-attr="title:lightbox.editor_rot_left" title="90° links">↺</button>
+                                <button class="lb-editor-crop-rotbtn" onclick="window.lightbox.editorRotate(90)" data-i18n-attr="title:lightbox.editor_rot_right" title="90° rechts">↻</button>
+                                <button class="lb-editor-crop-rotbtn" onclick="window.lightbox.editorRotate(180)" data-i18n-attr="title:lightbox.editor_rot_180" title="180°">↕</button>
+                            </div>
+
+                            <div class="lb-editor-crop-straighten">
+                                <div class="lb-tilt-scale" id="lb-tilt-scale-c" style="--value: 0">
+                                    <div class="lb-tilt-scale-track">
+                                        <div class="lb-tilt-scale-numbers"></div>
+                                        <div class="lb-tilt-scale-ticks"></div>
+                                    </div>
+                                    <div class="lb-tilt-scale-fade"></div>
+                                    <div class="lb-tilt-scale-pointer"></div>
+                                </div>
+                                <div class="lb-tilt-scale-readout">
+                                    <strong id="lb-straighten-val-c">0,0°</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="lb-editor-save" onclick="window.lightbox.closeCropMode(true)" data-i18n="lightbox.editor_apply">Übernehmen</button>
+                    </div>
+                </div>
+            </div>
+            <div class="lb-sidebar" id="lb-sidebar">
+                <h3 data-i18n="lightbox.sidebar_title">Bildinformationen</h3>
+                <div id="lb-metadata"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="help-overlay" id="help">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;"><h4 style="margin:0;font-size:1.1rem;" data-i18n="help.title">Tastenkürzel</h4><button onclick="window.lightbox._closeHelp()" style="background:rgba(255,255,255,0.12);border:none;border-radius:50%;width:28px;height:28px;color:#fff;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">×</button></div>
+        <div style="color:rgba(255,255,255,0.4);font-size:0.75rem;margin-bottom:6px;" data-i18n="help.section_lightbox">Lightbox</div>
+        <div><kbd>←</kbd> <kbd>→</kbd> <span data-i18n="help.prev_next">Vorheriges / Nächstes Bild</span></div>
+        <div><kbd>Space</kbd> <span data-i18n="help.slideshow">Slideshow starten / stoppen</span></div>
+        <div><kbd>i</kbd> <span data-i18n="help.info">Info ein/ausblenden</span></div>
+        <div><kbd>e</kbd> <span data-i18n="help.edit">Foto bearbeiten</span></div>
+        <div><kbd>Del</kbd> / <kbd>⌫</kbd> <span data-i18n="help.delete">Foto aus Album entfernen</span></div>
+        <div><kbd>f</kbd> <span data-i18n="help.fullscreen">Vollbild</span></div>
+        <div><kbd>+</kbd> <kbd>-</kbd> <span data-i18n="help.zoom">Zoom</span></div>
+        <div><kbd>0</kbd> <span data-i18n="help.zoom_reset">Zoom zurücksetzen</span></div>
+        <div><kbd>ESC</kbd> <span data-i18n="help.close">Schließen</span></div>
+        <div style="color:rgba(255,255,255,0.4);font-size:0.75rem;margin:8px 0 6px;" data-i18n="help.section_editor">Foto-Editor</div>
+        <div><kbd>r</kbd> <span data-i18n="help.rot_right">90° rechts drehen</span></div>
+        <div><kbd>l</kbd> <span data-i18n="help.rot_left">90° links drehen</span></div>
+        <div><kbd>Ctrl</kbd><kbd>Z</kbd> <span data-i18n="help.undo">Rückgängig</span></div>
+        <div><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Z</kbd> / <kbd>Ctrl</kbd><kbd>Y</kbd> <span data-i18n="help.redo">Wiederholen</span></div>
+        <div><kbd>Enter</kbd> <span data-i18n="help.save">Speichern</span></div>
+        <div><kbd>ESC</kbd> <span data-i18n="help.crop_close">Crop / Editor schließen</span></div>
+        <div style="color:rgba(255,255,255,0.4);font-size:0.75rem;margin:8px 0 6px;" data-i18n="help.section_general">Allgemein</div>
+        <div><kbd>h</kbd> <span data-i18n="help.this_help">Diese Hilfe</span></div>
+    </div>
+    
+    <script src="/js/theme.js?v=3"></script>
+    <script src="/js/mpd-dialog.js?v=3"></script>
+    <script src="/js/blurhash.js"></script>
+    <script src="/js/photo-zoom.js"></script>
+    <script src="/js/lightbox-core.js?v=8"></script>
+    <script src="/js/lightbox-exif.js?v=5"></script>
+    <script src="/js/lightbox-editor.js?v=7"></script>
+    <script src="/js/album-state.js"></script>
+    <script src="/js/album-render.js?v=35"></script>
+    <script src="/js/companion.js?v=2"></script>
+    <script src="/js/album-edit.js?v=17"></script>
+    <script src="/js/album-drag.js?v=4"></script>
+    <script src="/js/album-save.js?v=4"></script>
+    <script src="/js/album-insert.js?v=8"></script>
+    <script src="/js/album-mixed-picker.js?v=2"></script>
+    <script src="/js/album-ui.js?v=12"></script>
+    <script src="/js/album-map.js?v=2"></script>
+    <script src="/js/album.js?v=5"></script>
+</body>
+</html>

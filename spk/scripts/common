@@ -1,0 +1,228 @@
+#!/bin/sh
+# Gemeinsame Helfer. Das Paket läuft OHNE root: Container baut/startet/stoppt der Docker-Worker
+# des Container Managers (conf/resource); hier bleiben nur Wizard-Auswertung, Konfiguration
+# in var/ und die Statusabfrage über das setuid-Werkzeug des Container Managers.
+PKG="MPD"
+PKG_ROOT="/var/packages/${PKG}"
+TARGET="${SYNOPKG_PKGDEST:-${PKG_ROOT}/target}"
+VAR="${SYNOPKG_PKGVAR:-${PKG_ROOT}/var}"
+WIZENV="${VAR}/wizard.env"
+LOG="${VAR}/install.log"
+# Datenordner des Docker-Workers: /volume1/docker/<Paket>/data (im Container /data)
+DOCKER_DATA="${SYNOPKG_PKGDEST_VOL:-/volume1}/docker/${PKG}/data"
+# Wurzel der Freigaben. Ueberschreibbar nur fuer Trockentests ausserhalb der NAS.
+VOL_BASE="${MPD_VOL_BASE:-/volume1}"
+CONTAINER="syno-mpd"
+DOCKER_INSPECT="/usr/local/bin/docker_inspect"
+DEFAULT_LAN_PORT="8089"
+DEFAULT_PORTAL_HTTPS="8443"
+
+log() {
+    msg="$(date '+%Y-%m-%d %H:%M:%S') [$(basename "$0") ${SYNOPKG_PKG_STATUS:-}] $*"
+    mkdir -p "${VAR}" 2>/dev/null
+    echo "${msg}" >> "${LOG}" 2>/dev/null
+    echo "${msg}"
+}
+die() {
+    log "FEHLER: $*"
+    [ -n "${SYNOPKG_TEMP_LOGFILE:-}" ] && echo "$*" >> "${SYNOPKG_TEMP_LOGFILE}"
+    exit 1
+}
+wiz_get() { [ -f "${WIZENV}" ] && sed -n "s/^$1=//p" "${WIZENV}" | head -1; }
+
+# Lokale DSM-Konten, identisch zum Wizard. Schlüssel je Konto: wizard_role_<name>_<rolle>,
+# <name> = Kontoname mit allem außer [A-Za-z0-9] durch "_" ersetzt (user_key).
+local_users() {
+    awk -F: '$3 >= 1026 && $3 < 65536 && $6 ~ /^\/var\/services\/homes\// { print $1 }' "${PASSWD_FILE:-/etc/passwd}" | sort
+}
+user_key() { printf '%s' "$1" | sed 's/[^A-Za-z0-9]/_/g'; }
+json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+port_valid() { case "$1" in ''|*[!0-9]*) return 1;; esac; [ "$1" -ge 1024 ] && [ "$1" -le 65535 ]; }
+# Belegte TCP-Ports ohne ss/netstat: /proc/net/tcp{,6}, Zustand 0A = LISTEN, Port hex.
+port_in_use() {
+    hexport="$(printf '%04X' "$1")"
+    cat /proc/net/tcp /proc/net/tcp6 2>/dev/null | awk -v p=":${hexport}" '$4 == "0A" && index($2, p) == length($2) - length(p) + 1 { found = 1 } END { exit found ? 0 : 1 }'
+}
+
+# Wizard-Werte dauerhaft merken (für Upgrade-Wizard und Skripte). Keine Passwörter.
+save_wizard() {
+    mkdir -p "${VAR}"; umask 077
+    {
+        echo "wizard_photo_share=${wizard_photo_share:-$(wiz_get wizard_photo_share)}"
+        echo "wizard_photo_subdir=${wizard_photo_subdir:-$(wiz_get wizard_photo_subdir)}"
+        echo "wizard_homes_root=${wizard_homes_root:-$(wiz_get wizard_homes_root)}"
+        echo "wizard_personal_subdir=${wizard_personal_subdir:-$(wiz_get wizard_personal_subdir)}"
+        echo "wizard_port=${wizard_port:-$(wiz_get wizard_port)}"
+        echo "wizard_portal_https=${DEFAULT_PORTAL_HTTPS}"
+        echo "wizard_base_url=${wizard_base_url:-$(wiz_get wizard_base_url)}"
+        echo "wizard_accounts=${wizard_accounts:-$(wiz_get wizard_accounts)}"
+        echo "pkg_version=${SYNOPKG_PKGVER}"
+    } > "${WIZENV}.tmp" && mv "${WIZENV}.tmp" "${WIZENV}"
+    umask 022
+}
+
+# Statische Paketdateien mit den Ports füllen (target gehört dem Paketnutzer).
+apply_ports() {
+    lan="$1"; portal="$2"
+    [ -f "${TARGET}/port_conf/mpd.sc.tmpl" ] && sed -e "s/__LAN_PORT__/${lan}/g" -e "s/__PORTAL_HTTPS__/${portal}/g" \
+        "${TARGET}/port_conf/mpd.sc.tmpl" > "${TARGET}/port_conf/mpd.sc"
+    [ -f "${TARGET}/templates/ui-config.tmpl" ] && sed -e "s/__LAN_PORT__/${lan}/g" -e "s/__PORTAL_HTTPS__/${portal}/g" \
+        "${TARGET}/templates/ui-config.tmpl" > "${TARGET}/ui/config"
+    return 0
+}
+
+# Erstkonten-Spezifikation nach target/conf/bootstrap.json (liest entry.sh im Container einmalig).
+# Erzeugt bootstrap.json. personal_path ist derselbe Pfad wie auf dem Host
+# (<homes>/<konto>/<unterordner>) — entry.sh legt im Container Namens-Links dorthin, die auf
+# die Steckplaetze zeigen. So bleibt der gespeicherte Pfad nach Umstieg und Wiederherstellung
+# gueltig, ohne dass jemand users.json anfassen muss.
+write_bootstrap_spec() {
+    out="$1"; homes="$2"; subdir="$3"
+    mkdir -p "$(dirname "${out}")"; umask 077
+    {
+        echo '{"users":['
+        i=0
+        local_users | while read -r u; do
+            i=$((i+1)); role=""; k="$(user_key "${u}")"
+            for r in admin editor viewer; do
+                eval "sel=\${wizard_role_${k}_${r}:-}"
+                [ "${sel}" = "true" ] && role="${r}"
+            done
+            [ -n "${role}" ] || continue
+            if [ "${role}" = "admin" ]; then pw="${wizard_pw_admin:-}"; else pw="${wizard_pw_other:-}"; fi
+            [ -s "${out}.n" ] && echo ','
+            echo 1 >> "${out}.n"
+            printf '{"name":"%s","role":"%s","personal_path":"%s","password":"%s"}' \
+                "$(json_escape "${u}")" "${role}" "$(json_escape "${homes}/${u}/${subdir}")" "$(json_escape "${pw}")"
+        done
+        echo ']}'
+    } > "${out}"
+    rm -f "${out}.n"; umask 022
+}
+
+# Mount-Symlinks unter target/mounts setzen — nach der Worker-Pruefung (Install), vor dem
+# Start des Containers. Der Worker erlaubt nur Pfade unter target/ und lehnt Symlinks ab;
+# im prestart sind sie erlaubt, und Docker folgt ihnen beim Einhaengen.
+#
+# Steckplaetze: Die Deklaration kennt keine Kontonamen (DSM ersetzt dort nur wizard_*-Werte),
+# deshalb acht feste Mounts u1..u8. Belegt werden sie mit den Foto-Ordnern der lokalen
+# DSM-Konten, die einen haben. Die Zuordnung landet in conf/homes-map (= /app/pkgconf im Container), damit dieser
+# daraus Namens-Links bauen kann (/mpd-homes/<konto> -> /mpd-slots/uN).
+SLOTS=8
+
+# Zeitzone der NAS ermitteln. Der Container hat keine eigene: ohne diesen Wert
+# laeuft er in UTC, und jeder Zeitplan feuert verschoben — bis 09/2026 zwei
+# Stunden, im Winter eine. Aufgefallen ist es am Kuratier-Wochenbericht, der
+# sonntags um 18:00 gemeint war und um 20:00 ankam.
+#
+# Quelle ist der Symlink /etc/localtime, weil daraus ein echter IANA-Name
+# faellt ("Europe/Amsterdam"). DSMs eigener Name aus synoinfo.conf
+# ("Amsterdam") ist keiner und taugt nicht. Rueckfall ist der POSIX-String aus
+# /etc/TZ ("CET-1CEST,M3.5.0,M10.5.0/3"), den die C-Bibliothek auch ohne
+# Zonendaten versteht — Sommerzeit inklusive, nur ohne Namen.
+detect_timezone() {
+    zone=""
+    if [ -L /etc/localtime ]; then
+        zone="$(readlink /etc/localtime 2>/dev/null)"
+        case "${zone}" in
+            */zoneinfo/*) zone="${zone#*/zoneinfo/}" ;;
+            *)            zone="" ;;
+        esac
+    fi
+    if [ -z "${zone}" ] && [ -r /etc/TZ ]; then
+        zone="$(head -1 /etc/TZ 2>/dev/null | tr -d ' \t\r\n')"
+    fi
+    printf '%s' "${zone}"
+}
+
+link_mount() {   # $1 = Name unter mounts/, $2 = Ziel ("" = leerer Platzhalter)
+    name="$1"; target="$2"
+    if [ -d "${TARGET}/mounts/${name}" ] && [ ! -L "${TARGET}/mounts/${name}" ]; then
+        rm -f "${TARGET}/mounts/${name}/.keep" 2>/dev/null
+        rmdir "${TARGET}/mounts/${name}" 2>/dev/null || log "WARNUNG: ${TARGET}/mounts/${name} laesst sich nicht ersetzen"
+    fi
+    if [ -n "${target}" ] && [ -d "${target}" ]; then
+        ln -sfn "${target}" "${TARGET}/mounts/${name}"
+    else
+        ln -sfn ../empty "${TARGET}/mounts/${name}"
+    fi
+}
+
+apply_mounts() {
+    share="$1"; homes="$2"; subdir="${3:-Photos}"
+    mkdir -p "${TARGET}/mounts" "${TARGET}/empty"
+
+    if [ -n "${share}" ] && [ -d "/volume1/${share}" ]; then
+        link_mount photos "/volume1/${share}"
+    else
+        link_mount photos ""; log "WARNUNG: Freigabe /volume1/${share} nicht gefunden — Platzhalter"
+    fi
+
+    # Konten auf die Steckplaetze verteilen: alle mit vorhandenem Foto-Ordner, dazu die im
+    # Assistenten gewaehlten Konten, deren Ordner noch fehlt — den legt der Docker-Daemon beim
+    # Einhaengen an (als root), entry.sh uebergibt ihn danach dem Konto. Ohne das muesste ein
+    # Neukunde den Ordner erst von Hand anlegen und das Paket neu starten.
+    accounts=" $(wiz_get wizard_accounts) "
+    map=""; i=0
+    for u in $(local_users); do
+        [ "${i}" -lt "${SLOTS}" ] || { log "WARNUNG: mehr als ${SLOTS} Konten — Rest ohne eigenen Bereich"; break; }
+        if [ ! -d "${homes}/${u}/${subdir}" ]; then
+            case "${accounts}" in *" ${u} "*) ;; *) continue ;; esac
+            [ -d "${homes}/${u}" ] || continue
+            # Versuch, den Ordner anzulegen. Auf DSM scheitert das in der Regel: die ACL eines
+            # Home-Ordners gibt "everyone" nur Durchgangsrecht, und der Paketnutzer gehoert
+            # weder dem Konto noch den Administratoren. Dann bleibt der Platz leer — nie auf ein
+            # fehlendes Ziel verlinken, sonst startet der Container nicht.
+            mkdir -p "${homes}/${u}/${subdir}" 2>/dev/null
+            [ -d "${homes}/${u}/${subdir}" ] || {
+                log "Hinweis: ${u} hat noch keinen Ordner ${subdir} im Home — persoenlicher Bereich erscheint, sobald er existiert (danach Paket einmal stoppen und starten)"
+                continue
+            }
+        fi
+        i=$((i+1))
+        link_mount "u${i}" "${homes}/${u}/${subdir}"
+        ids="$(awk -F: -v n="${u}" '$1 == n { print $3 ":" $4 }' "${PASSWD_FILE:-/etc/passwd}")"
+        map="${map}${u}:u${i}:${ids}
+"
+    done
+    j="${i}"
+    while [ "${j}" -lt "${SLOTS}" ]; do j=$((j+1)); link_mount "u${j}" ""; done
+
+    # Zuordnung fuer den Container ablegen: target/conf gehoert dem Paketnutzer und ist im
+    # Container als /app/pkgconf eingehaengt (data/ traegt Synology-ACLs und ist fuer den
+    # Paketnutzer nicht zuverlaessig beschreibbar).
+    mkdir -p "${TARGET}/conf"
+    printf '%s' "${map}" > "${TARGET}/conf/homes-map"
+    log "Mounts: photos → $(readlink "${TARGET}/mounts/photos"), ${i} Konto(s) auf Steckplaetzen"
+
+    # Zeitzone auf demselben Weg wie die homes-map: hier geschrieben, im
+    # Container von entry.sh gelesen. Bei jedem Start neu, damit eine in DSM
+    # geaenderte Zeitzone nach Stoppen/Starten greift.
+    tz="$(detect_timezone)"
+    if [ -n "${tz}" ]; then
+        printf '%s' "${tz}" > "${TARGET}/conf/timezone"
+        log "Zeitzone: ${tz}"
+    else
+        rm -f "${TARGET}/conf/timezone"
+        log "WARNUNG: Zeitzone der NAS nicht ermittelbar — der Container laeuft in UTC, Zeitplaene verschieben sich entsprechend"
+    fi
+}
+
+# Steckplatz eines Kontos — nur noch fuer Diagnose; bootstrap.json nutzt den Namenspfad.
+slot_of() {
+    want="$1"; homes="$2"; subdir="${3:-Photos}"; i=0
+    for u in $(local_users); do
+        [ "${i}" -lt "${SLOTS}" ] || break
+        [ -d "${homes}/${u}/${subdir}" ] || continue
+        i=$((i+1))
+        [ "${u}" = "${want}" ] && { echo "u${i}"; return 0; }
+    done
+    return 1
+}
+
+container_running() {
+    [ -x "${DOCKER_INSPECT}" ] || return 4
+    "${DOCKER_INSPECT}" "${CONTAINER}" 2>/dev/null | grep -q '"Running": true' && return 0
+    "${DOCKER_INSPECT}" "${CONTAINER}" 2>/dev/null | grep -q '"Status"' && return 3
+    return 4
+}

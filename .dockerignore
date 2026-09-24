@@ -1,0 +1,19 @@
+__pycache__
+*.pyc
+*.log
+*.pid
+
+# Tests gehoeren nicht ins ausgelieferte Image (12.09.2026). Beim Entwickeln
+# sind sie ueber den Bind-Mount trotzdem da; das SPK-Paket schliesst sie
+# ohnehin schon aus.
+backend/tests
+requirements-dev.txt
+pyproject.toml
+.git
+.gitignore
+mpd.env
+pdx.env
+*.backup_*
+mpd_search_index.json
+.mpd_cache
+.mpd_backups

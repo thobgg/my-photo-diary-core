@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0a">
+<meta property="og:title" content="{{OG_TITLE}}">
+<meta property="og:description" content="{{OG_DESCRIPTION}}">
+<meta property="og:image" content="{{OG_IMAGE}}">
+<meta property="og:url" content="{{OG_URL}}">
+<title>My Photo Diary — geteiltes Foto</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { overscroll-behavior: none; }
+body {
+    font-family: Archivo, 'Helvetica Neue', Arial, sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+.sp-stage {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    min-height: 0;
+}
+.sp-stage img {
+    max-width: 100%;
+    max-height: calc(100dvh - 110px);
+    object-fit: contain;
+    border-radius: 4px;
+    background: #111;
+}
+.sp-bar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #222;
+}
+.sp-brand {
+    font-size: 12.5px;
+    color: #888;
+    line-height: 1.4;
+    min-width: 0;
+}
+.sp-brand b { color: #ccc; font-weight: 600; }
+.sp-brand .claim { color: #c8922a; font-style: italic; }
+.sp-download {
+    flex: 0 0 auto;
+    display: inline-block;
+    padding: 10px 18px;
+    background: #2E75B6;
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.sp-download:hover { background: #4F81BD; }
+</style>
+    <link rel="stylesheet" href="/css/fonts.css">
+</head>
+<body>
+<div class="sp-stage">
+    <img src="/share/{{TOKEN}}/thumbnail/{{ALBUM}}/{{FILE}}?size=xl" alt="">
+</div>
+<div class="sp-bar">
+    <div class="sp-brand">
+        <b>My Photo Diary</b><br>
+        <span class="claim">where memories stay yours — and kindly shared</span>
+    </div>
+    <a class="sp-download" href="/share/{{TOKEN}}/download" data-de="⬇ Original laden" data-en="⬇ Download original">⬇ Original laden</a>
+</div>
+<script>
+(function () {
+    'use strict';
+    if ((navigator.language || 'de').slice(0, 2) === 'en') {
+        document.documentElement.lang = 'en';
+        document.title = 'My Photo Diary — shared photo';
+        var a = document.querySelector('.sp-download');
+        a.textContent = a.getAttribute('data-en');
+    }
+})();
+</script>
+</body>
+</html>

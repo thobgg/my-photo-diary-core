@@ -1,0 +1,6 @@
+# Bauergebnisse des Pakets — gehoeren nicht in die Versionskontrolle.
+# dist/ enthaelt die fertige .spk, package.tgz und unter stage/ eine
+# vollstaendige Kopie des Frontends. Am 07.09.2026 waren das 6,6 MB von
+# 6,7 MB des ganzen Ordners, darunter eine .spk der Fassung 2.0.162, die
+# den Ist-Stand nicht mehr abbildet und beim Lesen in die Irre fuehrt.
+dist/

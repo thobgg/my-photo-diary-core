@@ -1,0 +1,146 @@
+/* MPD Write-Companion — Panel & Toolbar-Button
+ * Dezentes Overlay-Panel mit bis zu 3 Formulierungs-Varianten.
+ */
+
+/* ── Toolbar-Button (✨ neben OK/Emoji im Text-Block) ── */
+.companion-btn {
+    /* erbt .text-toolbar-btn-Basics aus edit-text.css */
+    position: relative;
+}
+
+.companion-btn.is-busy {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.companion-btn .companion-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: companion-spin 0.7s linear infinite;
+    vertical-align: middle;
+}
+
+@keyframes companion-spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* ── Panel (Overlay oberhalb vom Text-Block) ── */
+
+.companion-panel {
+    position: absolute;
+    z-index: 1200;
+    background: var(--surface, #1a1a1a);
+    border: 1px solid var(--border, #333);
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.35);
+    padding: 12px;
+    min-width: 280px;
+    max-width: 480px;
+    color: var(--text, #e0e0e0);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    animation: companion-pop 0.18s ease-out;
+}
+
+@keyframes companion-pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+.companion-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border, #333);
+}
+
+.companion-panel-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    opacity: 0.85;
+}
+
+.companion-panel-close {
+    background: transparent;
+    border: none;
+    color: var(--text, #e0e0e0);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    opacity: 0.7;
+}
+.companion-panel-close:hover { opacity: 1; background: var(--surface-alt, #222); }
+
+.companion-panel-body { display: flex; flex-direction: column; gap: 8px; }
+
+.companion-suggestion {
+    background: var(--surface-alt, #222);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.companion-suggestion:hover {
+    border-color: var(--blue, #2E75B6);
+    background: var(--blue-pale, rgba(46,117,182,0.15));
+}
+
+.companion-suggestion-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.65;
+    margin-bottom: 3px;
+}
+
+.companion-suggestion-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.companion-panel-footer {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border, #333);
+    font-size: 0.72rem;
+    opacity: 0.55;
+    text-align: right;
+}
+
+.companion-panel-error {
+    color: #c0392b;
+    font-size: 0.85rem;
+    padding: 8px 0;
+}
+
+.companion-panel-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.7;
+    padding: 8px 0;
+    font-size: 0.88rem;
+}
+
+@media (max-width: 600px) {
+    .companion-panel {
+        position: fixed;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        top: auto;
+        max-width: none;
+        min-width: 0;
+    }
+}

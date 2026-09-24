@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <title>App verbinden · My Photo Diary</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css?v=8">
+    <script>document.documentElement.setAttribute("data-theme", localStorage.getItem("mpd-theme") || "dark")</script>
+    <script src="/js/mpd-dialog.js?v=3"></script>
+    <script src="/js/i18n.js?v=48"></script>
+    <script src="/js/version-watch.js?v=5"></script>
+    <style>
+        body { background: var(--bg); color: var(--text); margin: 0; }
+        .vb-main { max-width: 760px; margin: 0 auto; padding: 1.2rem 1.2rem 4rem; }
+        .vb-lead { color: var(--muted, #888); font-size: .92rem; margin: .2rem 0 1.4rem; }
+        .vb-card {
+            background: var(--surface, #1f1f1f); border: 1px solid var(--border, #444);
+            border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem;
+            display: flex; gap: 1.4rem; align-items: center; flex-wrap: wrap;
+        }
+        .vb-card h2 { margin: 0 0 .3rem; font-size: 1rem; }
+        .vb-qr { flex: 0 0 auto; background: #fff; padding: 8px; border-radius: 8px; line-height: 0; }
+        /* Nur sichtbar, wenn die Seite aus dem QR-Code heraus geoeffnet wurde
+           (?setup=1). Der Sprung nach mpd:// wird beim Laden versucht; Browser
+           verlangen fuer fremde Protokolle zunehmend eine Nutzeraktion, dann
+           bleibt dieser Knopf. */
+        .vb-open { margin: 1.2rem 0; padding: 1rem; border-radius: 10px;
+                   background: var(--surface-alt, #222); border: 1px solid var(--border); }
+        .vb-btn-primary { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; }
+        .vb-qr img { width: 208px; height: 208px; display: block; }
+        .vb-side { flex: 1 1 260px; min-width: 240px; }
+        .vb-url {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 1.02rem; word-break: break-all; user-select: all;
+            background: var(--bg); border: 1px solid var(--border, #444);
+            border-radius: 8px; padding: .5rem .7rem; margin: .4rem 0 .6rem;
+        }
+        .vb-btn {
+            border: none; border-radius: 999px; padding: .45rem 1rem; font: inherit;
+            font-size: .85rem; background: var(--blue, #2E75B6); color: var(--text-on-accent, #fff);
+            cursor: pointer;
+        }
+        .vb-hint { color: var(--muted, #888); font-size: .84rem; margin-top: .5rem; }
+        .vb-steps { counter-reset: s; list-style: none; padding: 0; margin: 1.2rem 0 0; }
+        .vb-steps li { counter-increment: s; position: relative; padding: .35rem 0 .35rem 2.2rem; }
+        .vb-steps li::before {
+            content: counter(s); position: absolute; left: 0; top: .35rem;
+            width: 1.5rem; height: 1.5rem; border-radius: 50%;
+            background: var(--blue, #2E75B6); color: var(--text-on-accent, #fff);
+            display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 600;
+        }
+        .vb-error { color: #e06868; }
+        [hidden] { display: none !important; }
+    </style>
+</head>
+<body>
+    <header class="album-header">
+        <div class="header-left">
+            <a href="/" class="header-brand" title="Zur Startseite">
+                <img class="header-icon" src="/img/brand/mpd-logo.svg" alt="My Photo Diary">
+                <div class="header-titles">
+                    <span class="header-name">My Photo Diary</span>
+                    <span class="header-name-short">MPD</span>
+                </div>
+            </a>
+        </div>
+        <div class="header-center">
+            <h1 data-i18n="connect.title">App verbinden</h1>
+        </div>
+        <div class="header-right"></div>
+    </header>
+
+    <main class="vb-main">
+        <!-- Aus dem QR-Code heraus geoeffnet (?setup=1). Bewusst ganz oben und
+             als Hauptweg, nicht als Rueckfallebene: Ein QR-Scan erzeugt KEINE
+             Nutzergeste — die Kamera-App oeffnet den Browser, der laedt die
+             Seite, und aus Sicht der Seite hat niemand etwas beruehrt. Chrome
+             auf Android blockiert Spruenge in fremde Protokolle in genau
+             diesem Fall, und zwar still. Der Automatismus unten ist die
+             Zugabe; kommt er durch, sieht man diesen Knopf nie.
+             (App-Chat, 15.09.2026.) -->
+        <div class="vb-open" id="vb-open" hidden>
+            <button type="button" class="vb-btn vb-btn-primary" id="vb-open-btn"
+                    data-i18n="connect.open_app">In MPD öffnen</button>
+            <div class="vb-hint" data-i18n="connect.open_hint">Die App übernimmt die Adresse dieses Servers. Danach nur noch anmelden.</div>
+        </div>
+
+        <p class="vb-lead" data-i18n="connect.lead">Die MPD-App fragt beim ersten Start nach der Adresse deines Servers. Scanne den Code, dann musst du nichts abtippen.</p>
+
+        <div class="vb-card" id="vb-local-card" hidden>
+            <div class="vb-qr"><img id="vb-local-qr" alt="" src=""></div>
+            <div class="vb-side">
+                <h2 data-i18n="connect.local_title">Im Heimnetz</h2>
+                <div class="vb-url" id="vb-local-url">…</div>
+                <button type="button" class="vb-btn" id="vb-local-copy" data-i18n="connect.copy">Adresse kopieren</button>
+                <div class="vb-hint" data-i18n="connect.local_hint">Gilt, solange Handy und Server im selben Netz sind.</div>
+            </div>
+        </div>
+
+        <div class="vb-card" id="vb-remote-card" hidden>
+            <div class="vb-qr"><img id="vb-remote-qr" alt="" src=""></div>
+            <div class="vb-side">
+                <h2 data-i18n="connect.remote_title">Von unterwegs</h2>
+                <div class="vb-url" id="vb-remote-url">…</div>
+                <button type="button" class="vb-btn" id="vb-remote-copy" data-i18n="connect.copy">Adresse kopieren</button>
+                <div class="vb-hint" data-i18n="connect.remote_hint">Die öffentliche Adresse aus den Einstellungen. Funktioniert nur, wenn der Server von außen erreichbar ist.</div>
+            </div>
+        </div>
+
+        <div class="vb-error" id="vb-error" hidden></div>
+
+        <ol class="vb-steps">
+            <li data-i18n="connect.step1">MPD-App auf dem Handy installieren, falls noch nicht geschehen — <a href="https://bgg-home.de/mpd.apk" id="vb-apk">bgg-home.de/mpd.apk</a>.</li>
+            <li data-i18n="connect.step2">Code mit der Kamera scannen, dann „In MPD öffnen" antippen — die Adresse steht dann schon im Feld. Oder Adresse abtippen.</li>
+            <li data-i18n="connect.step3">Mit deinem MPD-Konto anmelden. Fertig.</li>
+        </ol>
+    </main>
+
+    <script src="/js/theme.js?v=3"></script>
+    <script>
+    (function () {
+        const _t = (k, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k) : fb) || fb;
+        function wire(kind, url) {
+            if (!url) return;
+            document.getElementById('vb-' + kind + '-card').hidden = false;
+            document.getElementById('vb-' + kind + '-url').textContent = url;
+            const img = document.getElementById('vb-' + kind + '-qr');
+            img.src = '/api/connect.svg' + (kind === 'remote' ? '?remote=1' : '');
+            img.alt = url;
+            document.getElementById('vb-' + kind + '-copy').onclick = async () => {
+                try {
+                    await navigator.clipboard.writeText(url);
+                    if (window.mpdToast) window.mpdToast(_t('connect.copied', 'Adresse kopiert'), { duration: 1800 });
+                } catch (_) {
+                    // Ohne Zwischenablage (http ohne TLS, aelteres Android): markieren reicht
+                    const r = document.createRange();
+                    r.selectNodeContents(document.getElementById('vb-' + kind + '-url'));
+                    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+                }
+            };
+        }
+        /* Aus dem QR-Code heraus geoeffnet: die App holen, wenn sie da ist.
+           Der Code traegt https://<server>/verbinden?setup=1 statt mpd://
+           direkt — ohne installierte App gaebe es sonst keinen Handler und
+           die Kamera-App scheiterte still. So landet man stattdessen hier,
+           wo erklaert steht, was zu tun ist.
+           Ohne ?setup=1 wird NICHTS versucht, sonst poppte MPD bei jedem
+           Seitenaufruf hoch. */
+        const setup = new URLSearchParams(location.search).get('setup') === '1';
+        if (setup) {
+            const ziel = 'mpd://setup?url=' + encodeURIComponent(location.origin);
+            document.getElementById('vb-open').hidden = false;
+            document.getElementById('vb-open-btn').onclick = () => { location.href = ziel; };
+
+            // Nur beim ERSTEN Aufruf automatisch springen. Wer aus der App
+            // zurueckkommt, um hier etwas nachzulesen, bekaeme sonst MPD
+            // sofort wieder vors Gesicht (App-Chat, 15.09.2026).
+            let schonVersucht = false;
+            try { schonVersucht = sessionStorage.getItem('mpd-setup-sprung') === '1'; } catch (_) {}
+            if (!schonVersucht) {
+                try { sessionStorage.setItem('mpd-setup-sprung', '1'); } catch (_) {}
+                try { location.href = ziel; } catch (_) { /* kein Handler — der Knopf bleibt */ }
+            }
+        }
+
+        fetch('/api/connect', { credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)))
+            .then(d => { wire('local', d.local); wire('remote', d.remote); })
+            .catch(err => {
+                const el = document.getElementById('vb-error');
+                el.hidden = false;
+                el.textContent = _t('connect.failed', 'Die Adresse konnte nicht ermittelt werden.') + ' (' + err.message + ')';
+            });
+    })();
+    </script>
+</body>
+</html>

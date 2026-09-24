@@ -1,0 +1,40 @@
+# Tests und Linter bei jedem Push und Pull Request.
+# Läuft im selben Image wie der Server (python:3.11-slim), damit hier nicht
+# grün ist, was dort rot wäre.
+
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    container: python:3.11-slim
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: System libraries (as in the Dockerfile)
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends libjpeg62-turbo zlib1g ffmpeg
+
+      - name: Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint (errors only)
+        run: ruff check --select F,E9 backend/
+
+      - name: Tests
+        run: pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t mpd-core .

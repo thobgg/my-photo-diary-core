@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Fotos beisteuern · My Photo Diary</title>
+<style>
+  :root { --gold:#c8922a; --bg:#14161a; --card:#1e2127; --text:#e8e6e1; --muted:#8a8f98; --ok:#4caf7d; --err:#d05c5c; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font-family:Archivo, 'Helvetica Neue', Arial, sans-serif;
+         display:flex; min-height:100vh; align-items:center; justify-content:center; padding:1rem; }
+  .card { background:var(--card); border-radius:14px; padding:2rem 1.6rem; width:100%; max-width:26rem;
+          box-shadow:0 8px 30px rgba(0,0,0,.35); text-align:center; }
+  h1 { font-size:1.25rem; margin:0 0 .3rem; }
+  h1 .gold { color:var(--gold); }
+  .folder { color:var(--muted); font-size:.9rem; margin-bottom:1.4rem; }
+  label { display:block; text-align:left; font-size:.8rem; color:var(--muted); margin:0 0 .3rem .2rem; }
+  input[type=text] { width:100%; padding:.6rem .8rem; border-radius:8px; border:1px solid #333842;
+          background:#12141a; color:var(--text); font-size:1rem; margin-bottom:1rem; }
+  .pick { display:block; width:100%; padding:.9rem; border-radius:10px; border:none; cursor:pointer;
+          background:var(--gold); color:#14161a; font-size:1.05rem; font-weight:700; }
+  .pick:disabled { opacity:.5; cursor:default; }
+  #file { display:none; }
+  .counter { margin-top:1.2rem; font-size:.85rem; color:var(--muted); }
+  ul { list-style:none; padding:0; margin:1rem 0 0; text-align:left; font-size:.85rem; max-height:11rem; overflow-y:auto; }
+  li { padding:.25rem 0; border-bottom:1px solid #262a31; display:flex; justify-content:space-between; gap:.6rem; }
+  li span.st-ok  { color:var(--ok); }
+  li span.st-err { color:var(--err); }
+  li span.name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .foot { margin-top:1.4rem; font-size:.72rem; color:var(--muted); }
+  .hint { margin:.4rem 0 .2rem; font-size:.78rem; color:var(--muted); }
+  .done { margin:.8rem 0 .2rem; font-size:.95rem; color:var(--gold, #e8a030); font-weight:600; }
+  .done[hidden] { display:none; }
+</style>
+    <link rel="stylesheet" href="/css/fonts.css">
+</head>
+<body>
+<div class="card">
+  <h1>Fotos <span class="gold">beisteuern</span></h1>
+  <div class="folder">für „{{FOLDER}}“</div>
+
+  <label for="guest">Dein Name (damit wir wissen, von wem die Fotos sind)</label>
+  <input type="text" id="guest" maxlength="40" placeholder="z. B. Erna">
+
+  <button class="pick" id="pick">Fotos &amp; Videos auswählen</button>
+  <div class="hint">Nach dem Auswählen geht es sofort los — es gibt keinen extra „Hochladen“-Knopf.</div>
+  <input type="file" id="file" multiple accept="image/*,video/*">
+  <div class="done" id="done" hidden></div>
+
+  <ul id="list"></ul>
+  <div class="counter" id="counter"></div>
+  <div class="foot">My Photo Diary · die Fotos landen direkt beim Gastgeber — nirgendwo sonst.</div>
+</div>
+<script>
+(function () {
+  var TOKEN = "{{TOKEN}}";
+  var guest = document.getElementById("guest");
+  var pick  = document.getElementById("pick");
+  var file  = document.getElementById("file");
+  var list  = document.getElementById("list");
+  var counter = document.getElementById("counter");
+  var done    = document.getElementById("done");
+  try { guest.value = localStorage.getItem("mpd_contrib_name") || ""; } catch (e) {}
+
+  function refresh() {
+    fetch("/contrib/" + TOKEN + "/status").then(function (r) {
+      if (!r.ok) { pick.disabled = true; counter.textContent = "Dieser Link ist nicht mehr gültig."; return; }
+      return r.json();
+    }).then(function (d) {
+      if (!d) return;
+      counter.textContent = d.uploaded + " von maximal " + d.max_files + " Beiträgen";
+      if (d.uploaded >= d.max_files) { pick.disabled = true; counter.textContent += " — voll, danke!"; }
+    }).catch(function () {});
+  }
+  refresh();
+
+  pick.addEventListener("click", function () { file.click(); });
+
+  file.addEventListener("change", function () {
+    var files = Array.prototype.slice.call(file.files);
+    file.value = "";
+    if (!files.length) return;
+    try { localStorage.setItem("mpd_contrib_name", guest.value); } catch (e) {}
+    done.hidden = true;
+    var okCount = 0, failCount = 0;
+    var chain = Promise.resolve();
+    files.forEach(function (f) {
+      var li = document.createElement("li");
+      var name = document.createElement("span"); name.className = "name"; name.textContent = f.name;
+      var st = document.createElement("span"); st.textContent = "…";
+      li.appendChild(name); li.appendChild(st); list.appendChild(li);
+      chain = chain.then(function () {
+        var url = "/contrib/" + TOKEN + "/upload?filename=" + encodeURIComponent(f.name)
+                + "&guest=" + encodeURIComponent(guest.value);
+        return fetch(url, { method: "POST", body: f }).then(function (r) {
+          if (r.ok) { st.textContent = "✓"; st.className = "st-ok"; okCount++; }
+          else if (r.status === 403) { st.textContent = "voll"; st.className = "st-err"; pick.disabled = true; failCount++; }
+          else { st.textContent = "Fehler"; st.className = "st-err"; failCount++; }
+        }).catch(function () { st.textContent = "Fehler"; st.className = "st-err"; failCount++; })
+          .then(refresh);
+      });
+    });
+    // Am Ende ein klares Wort — ein Gast suchte einen Knopf und
+    // wusste nicht, ob etwas passiert ist (09.09.2026).
+    chain.then(function () {
+      done.textContent = okCount === 1 ? "Danke, 1 Foto ist angekommen."
+                       : "Danke, " + okCount + " Fotos sind angekommen."
+                       + (failCount ? " " + failCount + " davon nicht — bitte noch einmal versuchen." : "");
+      done.hidden = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>

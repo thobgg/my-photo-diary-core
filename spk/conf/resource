@@ -1,0 +1,113 @@
+{
+  "docker": {
+    "services": [
+      {
+        "service": "mpd",
+        "image": "mpd",
+        "tag": "{{PKG_VERSION}}",
+        "container_name": "syno-mpd",
+        "environment": [
+          {
+            "env_var": "MPD_PHOTO_SHARED",
+            "env_value": "/volume1/{{wizard_photo_share}}"
+          },
+          {
+            "env_var": "MPD_PHOTO_SUBDIR",
+            "env_value": "{{wizard_photo_subdir}}"
+          },
+          {
+            "env_var": "MPD_HOMES_ROOT",
+            "env_value": "{{wizard_homes_root}}"
+          },
+          {
+            "env_var": "MPD_PERSONAL_SUBDIR",
+            "env_value": "{{wizard_personal_subdir}}"
+          },
+          {
+            "env_var": "MPD_BASE_URL",
+            "env_value": "{{wizard_base_url}}"
+          },
+          {
+            "env_var": "MPD_WARMER_THREADS",
+            "env_value": "2"
+          },
+          {
+            "env_var": "MPD_THUMB_SWEEP",
+            "env_value": "1"
+          },
+          {
+            "env_var": "MPD_STATE_DIR",
+            "env_value": "/data/state"
+          },
+          {
+            "env_var": "MPD_LICENSE_ENFORCE",
+            "env_value": "{{LICENSE_ENFORCE}}"
+          },
+          {
+            "env_var": "MPD_PKG_VERSION",
+            "env_value": "{{PKG_VERSION}}"
+          }
+        ],
+        "volumes": [
+          {
+            "host_dir": "conf",
+            "mount_point": "/app/pkgconf"
+          },
+          {
+            "host_dir": "mounts/photos",
+            "mount_point": "/volume1/{{wizard_photo_share}}"
+          },
+          {
+            "host_dir": "mounts/u1",
+            "mount_point": "/mpd-slots/u1/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u2",
+            "mount_point": "/mpd-slots/u2/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u3",
+            "mount_point": "/mpd-slots/u3/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u4",
+            "mount_point": "/mpd-slots/u4/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u5",
+            "mount_point": "/mpd-slots/u5/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u6",
+            "mount_point": "/mpd-slots/u6/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u7",
+            "mount_point": "/mpd-slots/u7/{{wizard_personal_subdir}}"
+          },
+          {
+            "host_dir": "mounts/u8",
+            "mount_point": "/mpd-slots/u8/{{wizard_personal_subdir}}"
+          }
+        ],
+        "shares": [
+          {
+            "host_dir": "data",
+            "mount_point": "/data"
+          }
+        ],
+        "ports": [
+          {
+            "host_port": "{{wizard_port}}",
+            "container_port": "8089",
+            "protocol": "tcp"
+          }
+        ],
+        "build": "image"
+      }
+    ]
+  },
+  "port-config": {
+    "protocol-file": "port_conf/mpd.sc"
+  }
+}

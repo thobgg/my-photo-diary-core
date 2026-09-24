@@ -1,0 +1,603 @@
+% =====================================================================
+%  PDX — Photo Diary Exchange · Gesamtspezifikation v1.5
+%  Konsolidierte Fassung: v1.3.1 (Basis) + v1.4 (source_album)
+%  + v1.4.1 (link) + v1.5 (heading, Markdown-light, quote-source),
+%  nomenklatorisch auf dem Stand der Implementierung (hidden -> locked).
+%  Basis: PDX_SPEC_v1_4_1.tex (App-Projekt MyPhotoDiary, 02.09.2026);
+%  die dortigen "Ausblick"-Punkte sind hier normativ eingearbeitet.
+%  Gestaltung streng nach MPD_CI (v1.1): Carlito/Calibri, Titelblatt-
+%  Struktur, H1 blau mit Unterlinie, Tabellen D6E4F0/EBF3FB,
+%  Code-Bloecke F2F2F2, Inline-Code C_RED. Kein Gold in Dokumenten.
+%  Fortgeschrieben 02.09.2026 im MPD-Repo (Server-Chat), docs/specs/.
+% =====================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage[sfdefault]{carlito}   % metrisch kompatibel zu Calibri (CI §3)
+\usepackage{courier}              % Courier fuer Code (CI §3)
+\usepackage{microtype}
+\usepackage[table]{xcolor}
+\usepackage[a4paper,top=2.0cm,bottom=2.0cm,left=2.5cm,right=2.5cm]{geometry} % CI §4
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[colorlinks=true]{hyperref}
+
+% -- MPD-CI-Farbpalette (MPD_CI §2) ------------------------------------
+\definecolor{mpdnavy}{HTML}{2C3E50}   % C_DARK  — Haupttitel, Zitat
+\definecolor{mpdslate}{HTML}{34495E}  % C_MID   — Subtitel
+\definecolor{mpdblue}{HTML}{2E75B6}   % C_BLUE  — H1/H2, Links
+\definecolor{mpdbluemid}{HTML}{4F81BD}% C_LIGHT — H3/H4, Tabellen-Header
+\definecolor{mpdgrey}{HTML}{7F8C8D}   % C_GREY  — Captions, Meta
+\definecolor{mpdred}{HTML}{C0392B}    % C_RED   — Inline-Code, Bezeichner
+\definecolor{mpdrule}{HTML}{5B9BD5}   % C_LINE  — Trennlinien
+\definecolor{tblhead}{HTML}{D6E4F0}   % Tabellen-Kopf
+\definecolor{tblalt}{HTML}{EBF3FB}    % alternierende Zeilen
+\definecolor{tblborder}{HTML}{CCCCCC} % Tabellenrahmen
+\definecolor{codebg}{HTML}{F2F2F2}    % Code-Block-Hintergrund
+
+\hypersetup{linkcolor=mpdblue, urlcolor=mpdblue, citecolor=mpdblue,
+  pdftitle={PDX — Photo Diary Exchange, Spezifikation v1.5},
+  pdfauthor={Thomas Bugge / My Photo Diary}}
+
+% -- Ueberschriften (CI §3/§4: H1 16pt blau + Unterlinie 5B9BD5) -------
+\titleformat{\section}
+  {\color{mpdblue}\bfseries\fontsize{16}{20}\selectfont}
+  {\thesection.}{0.5em}{}
+  [{\color{mpdrule}\titlerule[0.8pt]}]
+\titleformat{\subsection}
+  {\color{mpdblue}\bfseries\fontsize{13}{16}\selectfont}
+  {\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}
+  {\color{mpdblue}\bfseries\normalsize}{\thesubsubsection}{0.5em}{}
+
+% -- Kopf-/Fusszeile: Meta in C_GREY -----------------------------------
+\pagestyle{fancy}\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyhead[L]{\small\color{mpdgrey}PDX — Photo Diary Exchange}
+\fancyhead[R]{\small\color{mpdgrey}Spezifikation v1.5}
+\fancyfoot[L]{\small\color{mpdgrey}\itshape where your memories stay yours.}
+\fancyfoot[R]{\small\color{mpdgrey}\thepage}
+
+% -- Inline-Code rot (CI §2: C_RED fuer technische Bezeichner) ---------
+\let\mpdtt\texttt
+\renewcommand{\texttt}[1]{\mpdtt{\textcolor{mpdred}{#1}}}
+\newcommand{\feld}[1]{\mpdtt{\textbf{\textcolor{mpdred}{#1}}}}
+
+% -- Code-Bloecke: F2F2F2, kein Rahmen, Courier 9pt (CI §4) ------------
+\lstdefinelanguage{json}{
+  string=[b]",
+  stringstyle=\color{mpdnavy},
+  literate=
+    {:}{{{\color{mpdgrey}:}}}{1}
+    {,}{{{\color{mpdgrey},}}}{1}
+    {\{}{{{\color{mpdblue}\{}}}{1}
+    {\}}{{{\color{mpdblue}\}}}}{1}
+    {[}{{{\color{mpdblue}[}}}{1}
+    {]}{{{\color{mpdblue}]}}}{1}
+    {ä}{{\"a}}1 {ö}{{\"o}}1 {ü}{{\"u}}1 {ß}{{\ss}}1
+    {Ä}{{\"A}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1,
+}
+\lstset{
+  language=json,
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=none, xleftmargin=6pt, framexleftmargin=6pt,
+  breaklines=true, columns=fullflexible,
+  keepspaces=true, showstringspaces=false,
+  aboveskip=8pt, belowskip=8pt,
+}
+
+% -- Tabellen: Kopf D6E4F0, Zeilen weiss/EBF3FB, Rahmen CCCCCC (CI §4) -
+\arrayrulecolor{tblborder}
+\setlength{\arrayrulewidth}{0.75pt}
+\renewcommand{\arraystretch}{1.3}
+\rowcolors{2}{white}{tblalt}
+\newcommand{\kopf}[1]{\textbf{#1}}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+
+\begin{document}
+\shorthandoff{"}
+
+% -- Titelblock exakt nach CI §4 (Titelblatt-Struktur) -----------------
+\begin{center}
+  {\fontsize{36}{42}\selectfont\bfseries\color{mpdnavy} My Photo Diary}\\[6pt]
+  {\fontsize{18}{22}\selectfont\color{mpdslate} PDX — Photo Diary Exchange
+   \;·\; Format Specification}\\[8pt]
+  {\fontsize{13}{16}\selectfont\color{mpdgrey} Version 1.5 \;·\; 2026-09-02}\\[8pt]
+  {\color{mpdrule}\rule{\linewidth}{1pt}}\\[6pt]
+  {\color{mpdgrey}\small Status: \textbf{Stable} \;·\; konsolidierte
+   Gesamtfassung \;·\; Lizenz: Open}\\[6pt]
+  {\color{mpdrule}\rule{\linewidth}{1pt}}\\[8pt]
+  {\itshape\color{mpdnavy} „My Photo Diary — where your memories stay yours.“}
+\end{center}
+
+\vspace{4pt}
+{\small\color{mpdgrey}
+Diese Gesamtfassung konsolidiert PDX v1.3.1 (Elementtypen), v1.4
+(\texttt{source\_album}), v1.4.1 (\texttt{link}) und v1.5
+(\texttt{heading}, Markdown-light, \texttt{source} am Zitat) in einem
+Dokument und
+verwendet durchgehend die aktuelle Nomenklatur der MPD-Implementierung
+(\texttt{locked}/\texttt{show\_locked}; siehe Abschnitt~\ref{sec:locked}).
+Referenzimplementierung: MPD~v2 — \texttt{backend/routers/albums.py}
+(Validierung, Auflösung), \texttt{frontend/js/album-render.js}
+(Darstellung) sowie die native Android-App (\texttt{de.bgghome.mpd}).}
+
+\tableofcontents
+
+% ======================================================================
+\section{Konzept}
+
+PDX beschreibt ein Fotoalbum als \emph{Drehbuch}: eine einzige, von Hand
+lesbare Datei \texttt{album.json} neben den unveränderten Mediendateien.
+Die Grundsätze:
+
+\begin{itemize}
+  \item \textbf{Overlay-Prinzip.} PDX verändert nie Mediendateien. Das
+        Löschen eines Albums löscht nur das Drehbuch; die Photos bleiben.
+  \item \textbf{Verweis-Container.} Jedes Medien-Element ist ein Verweis
+        auf eine Datei — keine eingebetteten Daten. Seit v1.4 kann der
+        Verweis auch in einen anderen Albumordner desselben Spaces zeigen.
+  \item \textbf{Reihenfolge ist Wahrheit.} Die Array-Reihenfolge in
+        \texttt{elements} ist die einzige Quelle der Anzeige-Reihenfolge.
+  \item \textbf{Vorwärtskompatibilität.} Viewer \emph{müssen} unbekannte
+        Elementtypen und Felder still überspringen — nie abstürzen.
+  \item \textbf{Deklarativ, nicht gerendert.} PDX speichert Stil-\emph{Namen}
+        (z.\,B. \texttt{"style": "quote"}); wie diese aussehen, entscheidet
+        jeder Viewer (Web-CSS, native App, künftige Ausgaben wie ein
+        PDF-Fotobuch) — mit dem Ziel eines konsistenten Gesamtbilds.
+        Die \emph{Referenzdarstellung} der Stile (Schrift, Größe, Farbe,
+        Form) legt die MPD-CI fest (\texttt{MPD\_CI\_v1\_2}, Abschnitt
+        „Referenz-Typografie der PDX-Textstile“); eigene Viewer sollten
+        sich daran orientieren, müssen es aber nicht.
+\end{itemize}
+
+\subsection{Dateistruktur}
+
+Flaches Verzeichnis, keine Unterordner (abgesehen vom verwalteten
+Sicherungsordner der Implementierung):
+
+\begin{lstlisting}[language={}]
+2024-gran-canaria/
+  album.json
+  2024-03-15_08-30-15.jpg        <- photo
+  2024-03-15_16-45-12.mp4        <- video
+  2024-03-15_hike.gpx            <- tour
+  2024-03-16_hotelrechnung.pdf   <- document (PDF)
+  2024-03-15_gipfel.m4a          <- audio
+  .mpd_backups/                  <- MPD: letzte 10 Staende von album.json
+\end{lstlisting}
+
+% ======================================================================
+\section{Wurzelstruktur und Meta}
+
+\begin{lstlisting}
+{
+  "version": "1.5",
+  "meta": { ... },
+  "elements": [ ... ]
+}
+\end{lstlisting}
+
+\subsection{\texttt{meta}}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{title} & String & ja & Anzeigetitel des Albums \\
+\feld{description} & String & nein & Kurzbeschreibung (Übersichtskarte) \\
+\feld{year} & Zahl & nein & Jahr; \texttt{null} bei jahrübergreifenden Sammlungen \\
+\feld{thumbnail} & String & nein & Dateiname des Covers, immer lokal im Albumordner \\
+\feld{created} & String & ja & ISO-8601-Zeitstempel der Erstellung \\
+\feld{modified} & String & ja & ISO-8601; wird vom Server bei jedem Speichern gesetzt \\
+\feld{show\_locked} & Boolean & nein & Gesperrte Elemente im Lesemodus zeigen? Default \texttt{true} (Abschnitt~\ref{sec:locked}) \\
+\hline
+\end{tabularx}
+
+\emph{MPD-Laufzeitfelder} (nicht Teil der Spezifikation, von der
+Implementierung ergänzt): \texttt{thumbnail\_crop} (Cover-Ausschnitt der
+Übersicht).
+
+% ======================================================================
+\section{Elementtypen}
+
+Gemeinsame Basisfelder aller Elemente:
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{id} & String & ja & vierstellig (\texttt{0001}–\texttt{9999}), albumweit eindeutig, stabil \\
+\feld{type} & String & ja & einer der Typen dieses Abschnitts \\
+\feld{locked} & Boolean & nein & Element privat: aus geteilten Alben ausgeblendet; im Lesemodus nur sichtbar, wenn \texttt{meta.show\_locked} es erlaubt \\
+\hline
+\end{tabularx}
+
+\subsection{\texttt{photo}}
+
+\begin{lstlisting}
+{ "id": "0005", "type": "photo", "file": "2024-03-15_08-30-15.jpg" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{file} & String & ja & Dateiname (JPG/PNG/WebP …), relativ zum Albumordner \\
+\feld{source\_album} & String & nein & Auflösung aus anderem Albumordner (Abschnitt~\ref{sec:source}) \\
+\hline
+\end{tabularx}
+
+Bildunterschriften sind \emph{kein} PDX-Feld: Der Erzählfluss lebt von
+\texttt{text}-Elementen \emph{zwischen} den Photos (bewusste
+Format-Entscheidung); eine dateigebundene Beschriftung gehört ins EXIF
+der Bilddatei (\texttt{ImageDescription}).
+
+\subsection{\texttt{video}}
+
+Felder wie \texttt{photo}. Darstellung: statisches Vorschaubild im
+Lesefluss; Antippen öffnet einen Player (HTML5-\texttt{<video>} bzw.
+nativer Player), ohne Autoplay.
+
+\subsection{\texttt{text}}
+
+\begin{lstlisting}
+{ "id": "0002", "type": "text",
+  "text": "Endlich auf der Insel.", "style": "default" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{text} & String & ja & Text; Zeilenumbrüche erlaubt, kein HTML — seit v1.5 mit Markdown-light (Abschnitt~\ref{sec:mdlight}) \\
+\feld{style} & String & nein & \texttt{default} · \texttt{info} · \texttt{quote} · \texttt{note} · \texttt{heading} \emph{(v1.5)} \\
+\feld{source} & String & nein & \emph{v1.5:} Quellenangabe, nur bei \texttt{style: "quote"} definiert; reiner Text, Anzeige klein unter dem Zitat \\
+\hline
+\end{tabularx}
+
+\begin{tabularx}{\linewidth}{|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Stil} & \kopf{Charakter} \\
+\hline
+\feld{default} & Erzähltext, zentriert, lesefreundliche Breite \\
+\feld{info} & sachlicher Kasten, blaue Akzentkante \\
+\feld{quote} & Zitat, kursiv, mit Anführungs-Initiale \\
+\feld{note} & persönliche Notiz, goldene Akzentkante \\
+\feld{heading} & \emph{v1.5:} echte Kapitel-Überschrift — größere Schrift, Akzentfarbe des Themes; ersetzt den Behelf über Trenner-Labels \\
+\hline
+\end{tabularx}
+
+\subsubsection*{Markdown-light \;(v1.5)}\label{sec:mdlight}
+
+Im \feld{text}-Feld sind genau \emph{zwei} Auszeichnungen zulässig:
+\texttt{*kursiv*} und \texttt{**fett**}. Kein HTML, keine weiteren
+Markdown-Konstrukte, keine Verschachtelung.
+
+\begin{itemize}
+  \item \textbf{Speicherung:} \feld{text} bleibt ein reiner String.
+        Server \textbf{dürfen} nichts strippen, rendern oder
+        umschreiben — die Sternchen sind Teil des gespeicherten Texts.
+  \item \textbf{Darstellung:} Viewer rendern die beiden Auszeichnungen
+        in allen Text-Stilen. Die Umsetzung \textbf{muss} injektionssicher
+        sein (Referenz \texttt{album-render.js}: Tokenisierung in Text-/%
+        \texttt{<strong>}/\texttt{<em>}-Knoten, kein \texttt{innerHTML}).
+  \item \textbf{Editoren} geben beim Bearbeiten den Roh-Text samt
+        Sternchen aus — gerendertes Markup im Editor würde die
+        Auszeichnung beim Zurückschreiben zerstören.
+  \item \textbf{Degradation:} Viewer vor v1.5 zeigen die Sternchen
+        wörtlich — die einzige, bewusst verschmerzte Abweichung.
+\end{itemize}
+
+\subsection{\texttt{separator}}
+
+Erzählerische Zäsur — Kapitelwechsel, Zeitsprung.
+
+\begin{lstlisting}
+{ "id": "0015", "type": "separator", "label": "Tag 2 - Florenz" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{label} & String & nein & kurze Beschriftung, max.\ 80 Zeichen; ohne Label reine Trennlinie \\
+\feld{style} & String & nein & \texttt{line} (Default) · \texttt{bold} · \texttt{dashed} · \texttt{dots} · \texttt{space} \\
+\hline
+\end{tabularx}
+
+\subsection{\texttt{tour}}
+
+Lokal gespeicherter GPS-Track (GPX), als interaktive Karte gerendert —
+vollständig selbst gehostet.
+
+\begin{lstlisting}
+{ "id": "0016", "type": "tour", "file": "2024-03-15_hike.gpx",
+  "title": "Roque Nublo", "source": "komoot" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{file} & String & ja & GPX-Datei im Albumordner \\
+\feld{title} & String & nein & Anzeigetitel über der Karte \\
+\feld{source} & String & nein & Herkunft (\texttt{komoot}, \texttt{garmin} …), rein informativ \\
+\feld{type\_hint} & String & nein & Sportart für das Icon (\texttt{hiking}, \texttt{cycling} …) \\
+\feld{map\_layer} & String & nein & Grundkarte \texttt{osm} (Default) · \texttt{topo} \\
+\feld{show\_elevation} & Boolean & nein & Höhenprofil anzeigen, Default \texttt{true} \\
+\feld{source\_album} & String & nein & siehe Abschnitt~\ref{sec:source} \\
+\hline
+\end{tabularx}
+
+\subsection{\texttt{document}}
+
+Gescannte Belege — Tickets, Rechnungen, Bordkarten — und seit 1.5.1 auch
+Textdateien. \emph{PDF} wird als Karte mit Reader dargestellt;
+\emph{JPG/PNG-Scans} werden inline wie Photos gesetzt; \emph{TXT/MD}
+erscheinen als aufklappbarer Kasten, dessen Inhalt beim Aufklappen aus der
+Datei gelesen wird — nicht in die \texttt{album.json} kopiert, damit es nur
+eine Wahrheit gibt. Der Text ist auf 100\,KB gedeckelt, darüber verweist
+der Kasten auf die vollständige Ansicht.
+
+\feld{title} ist bei \texttt{document} zugleich die Beschriftung
+\emph{im} Element: in der PDF-Karte an Stelle des Dateinamens, bei einer
+Textdatei in der Klappzeile. Fehlt er, zeigt die Darstellung eine
+abgeleitete Beschriftung (bei Textdateien die erste nicht-leere Zeile,
+sonst den Dateinamen). Diese abgeleitete Beschriftung wird \emph{nicht}
+gespeichert — in der \texttt{album.json} steht dann weiterhin kein
+\feld{title}.
+
+\begin{lstlisting}
+{ "id": "0021", "type": "document",
+  "file": "2024-03-16_hotelrechnung.pdf",
+  "title": "Hotel Parador - Rechnung", "kind": "receipt" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{file} & String & ja & JPG/PNG/PDF/TXT/MD im Albumordner \\
+\feld{title} & String & nein & Beschriftung im Element (PDF-Karte, Klappzeile); bei JPG/PNG darüber \\
+\feld{kind} & String & nein & \texttt{ticket} · \texttt{receipt} · \texttt{invoice} · \texttt{boarding\_pass} · \texttt{other}; rein informativ \\
+\feld{source\_album} & String & nein & siehe Abschnitt~\ref{sec:source} \\
+\hline
+\end{tabularx}
+
+\subsection{\texttt{audio}}
+
+Sprachnotizen und Atmosphären, als Inline-Player gerendert.
+
+\begin{lstlisting}
+{ "id": "0022", "type": "audio",
+  "file": "2024-03-15_gipfel.m4a", "title": "Wind am Gipfel" }
+\end{lstlisting}
+
+Felder: \feld{file} (Pflicht; MP3/M4A/OGG/WAV), \feld{title} (optional),
+\feld{source\_album} (optional).
+
+\subsection{\texttt{map}}
+
+Manuell gesetzte Orts-Pins ohne Track — Reiserouten, Hotels, Sehenswertes.
+
+\begin{lstlisting}
+{ "id": "0023", "type": "map", "title": "Reiseroute",
+  "pins": [
+    { "lat": 53.6304, "lon":  9.9882, "label": "Hamburg (HAM)" },
+    { "lat": 27.9319, "lon": -15.3866, "label": "Gran Canaria (LPA)" }
+  ] }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{pins} & Array & ja & mindestens ein Pin: \feld{lat}/\feld{lon}
+  (WGS84, Pflicht), \feld{label} (optional) \\
+\feld{title} & String & nein & Anzeigetitel über der Karte \\
+\feld{layer} & String & nein & Grundkarte \texttt{osm} (Default) · \texttt{topo} \\
+\hline
+\end{tabularx}
+
+Darstellung: Zoom automatisch auf alle Pins; ein Pin → nur Marker;
+ab zwei Pins verbindet eine Geodäten-Linie (Großkreis) die Pins in
+Reihenfolge — ideal für Reiserouten.
+
+\subsection{\texttt{link} \; (neu in v1.4.1)}\label{sec:link}
+
+Verweis auf eine Webseite — der erste Elementtyp, der \emph{nicht} auf
+eine Datei zeigt: statt \feld{file} trägt er \feld{url}.
+
+\begin{lstlisting}
+{ "id": "0042", "type": "link",
+  "url": "https://www.alpenvereinaktiv.com/de/tour/12345",
+  "title": "Wanderung Rifugio Gardeccia",
+  "note": "Route und Hoehenprofil" }
+\end{lstlisting}
+
+\begin{tabularx}{\linewidth}{|l|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{Typ} & \kopf{Pflicht} & \kopf{Bedeutung} \\
+\hline
+\feld{url} & String & \textbf{ja} & nur \texttt{http://}/\texttt{https://}, max.\ 2048 Zeichen \\
+\feld{title} & String & nein & Anzeigename; fehlt er, zeigt der Viewer die Domain \\
+\feld{note} & String & nein & eine Zeile Kontext unter dem Chip \\
+\hline
+\end{tabularx}
+
+Regeln (Sicherheit und Privatsphäre):
+\begin{itemize}
+  \item Andere Schemata (\texttt{javascript:}, \texttt{data:},
+        \texttt{file:} …) sind \textbf{unzulässig}; die Prüfung
+        \textbf{muss} serverseitig erfolgen.
+  \item Der Viewer \textbf{muss} in neuem Kontext öffnen und \textbf{soll}
+        die Zieldomain vor dem Aktivieren sichtbar machen.
+  \item Weder Client noch Server \textbf{dürfen} die Zielseite für
+        Vorschaudaten abrufen — in geteilten Alben würde das dem
+        Zielserver Existenz und Zeitpunkt des Betrachtens verraten.
+        Titel und Notiz werden von Hand gepflegt.
+  \item \feld{source\_album} ist für \texttt{link} nicht definiert.
+\end{itemize}
+
+% ======================================================================
+\section{Verweise in andere Alben: \texttt{source\_album} \;(v1.4)}\label{sec:source}
+
+Medien-Elemente (\texttt{photo}, \texttt{video}, \texttt{tour},
+\texttt{document}, \texttt{audio}) dürfen optional
+\feld{source\_album} tragen: Die Datei wird dann im genannten
+Albumordner \emph{desselben Spaces} aufgelöst statt lokal.
+
+\begin{lstlisting}
+{ "id": "0042", "type": "photo", "file": "IMG_5678.jpg",
+  "source_album": "2022-einschulung" }
+\end{lstlisting}
+
+\begin{itemize}
+  \item Anwendungsfall: kuratierte Sammlungen (Personen-Alben über Jahre,
+        Best-ofs) ohne Datei-Duplikate. Mischformen sind erlaubt; es gibt
+        keinen eigenen Album-Typ.
+  \item \textbf{Cross-Space-Referenzen sind verboten} (Space-Isolation,
+        schlichtes Rechte-Modell). Validatoren müssen sie ablehnen.
+  \item Verlorene Referenzen führen zu Soft-Fail
+        (\texttt{source\_missing: true} zur Laufzeit), nie zum Absturz.
+  \item \textbf{Cover:} \texttt{meta.thumbnail} bleibt immer ein lokaler
+        Dateiname. Ein referenziertes Photo wird als Cover physisch als
+        \texttt{cover.<ext>} in den eigenen Ordner kopiert
+        (MPD: \texttt{POST \dots/cover-from-source}).
+\end{itemize}
+
+% ======================================================================
+\section{Sichtbarkeit: \texttt{locked} und \texttt{show\_locked}}\label{sec:locked}
+
+Jedes Element kann mit \texttt{locked: true} als privat markiert werden:
+
+\begin{itemize}
+  \item In \textbf{geteilten} Alben (Share-Links) werden gesperrte
+        Elemente immer ausgefiltert.
+  \item Im \textbf{Lesemodus} des Eigentümers entscheidet
+        \texttt{meta.show\_locked} (Default \texttt{true}); der
+        Schlüssel-Umschalter der Oberfläche dient als Vorschau
+        „so sieht es ein Empfänger“.
+  \item Im \textbf{Bearbeitungsmodus} sind gesperrte Elemente immer
+        sichtbar — sonst wären sie nach dem Sperren unerreichbar.
+  \item \texttt{separator}-Elemente sind Struktur, keine Inhalte —
+        sie unterliegen dieser Filterung nicht.
+\end{itemize}
+
+\emph{Historie:} Bis v1.3.1 hießen diese Konzepte \texttt{hidden} /
+\texttt{show\_hidden} (der Text-Stil \texttt{hidden} eingeschlossen).
+Die Implementierung migriert Altbestände beim Laden still auf
+\texttt{locked} / \texttt{show\_locked}.
+
+% ======================================================================
+\section{Laufzeitfelder (nicht speichern)}
+
+Die Auslieferung ergänzt berechnete Felder, die \textbf{nie} in
+\texttt{album.json} zurückgeschrieben werden dürfen; Server
+\textbf{müssen} sie beim Speichern verwerfen:
+
+\begin{tabularx}{\linewidth}{|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Feld} & \kopf{an Typen} & \kopf{Bedeutung} \\
+\hline
+\feld{thumbnails} & photo, video, document & URLs der Größen \texttt{sm}/\texttt{m}/\texttt{xl}/\texttt{full} \\
+\feld{original} & photo & Download-URL des Originals \\
+\feld{resolution} & photo & \texttt{\{width, height\}} in Pixeln \\
+\feld{blurhash} & photo & Platzhalter-Hash für sanftes Laden \\
+\feld{document\_url} & document (PDF) & Auslieferungs-URL des Readers \\
+\feld{error} & Medien-Typen & gesetzt, wenn die Datei fehlt (Soft-Fail) \\
+\feld{source\_missing} & Medien-Typen & \texttt{true}, wenn eine \texttt{source\_album}-Referenz ins Leere zeigt \\
+\hline
+\end{tabularx}
+
+% ======================================================================
+\section{Validierung (Zusammenfassung)}
+
+\begin{itemize}
+  \item \feld{id}: Pflicht, vierstellig, albumweit eindeutig.
+  \item Alle Dateiverweise müssen auf existierende Dateien zeigen
+        (Soft-Fail zur Laufzeit, harte Prüfung beim Anlegen).
+  \item \texttt{separator.label} max.\ 80 Zeichen, reiner Text.
+  \item \texttt{map.pins} mindestens ein Pin mit \feld{lat}/\feld{lon}.
+  \item \texttt{document.file}: JPG, PNG, PDF, TXT oder MD; \texttt{audio.file}:
+        MP3, M4A, OGG oder WAV; \texttt{tour.file}: gültiges GPX.
+  \item \texttt{link.url}: Pflicht, nur \texttt{http}/\texttt{https},
+        max.\ 2048 Zeichen; Prüfung serverseitig.
+  \item \texttt{source\_album}: einfacher Ordnername ohne Pfadtrenner
+        und ohne \texttt{..}; gleicher Space; Cross-Space ablehnen.
+  \item Titel/Notizen/Labels sind reiner Text — Viewer setzen sie als
+        Text, nie als Markup. Gleiches gilt für \texttt{text.source}
+        (v1.5). Markdown-light gilt \emph{ausschließlich} für
+        \feld{text} (Abschnitt~\ref{sec:mdlight}).
+\end{itemize}
+
+% ======================================================================
+\section{Kompatibilität und Migration}
+
+Jede Version seit v1.2.1 ist ein striktes Superset ihrer Vorgängerin —
+\textbf{keine Migration nötig}, alte Alben bleiben gültig. Viewer
+überspringen Unbekanntes still. \texttt{version} \textbf{soll} auf die
+höchste genutzte Fähigkeit gesetzt werden (\texttt{"1.4.1"}, sobald
+\texttt{link} vorkommt; \texttt{"1.5"}, sobald \texttt{heading} oder
+\texttt{source} vorkommt). Die MPD-Referenzimplementierung leitet die
+Nummer beim Speichern aus dem Inhalt ab; reines Markdown-light ist im
+String nicht sicher erkennbar und ändert die Nummer allein nicht —
+unkritisch, da ältere Viewer die Sternchen nur wörtlich zeigen.
+
+\subsection*{Versions-Historie}
+
+\begin{tabularx}{\linewidth}{|l|l|L|}
+\hline
+\rowcolor{tblhead}\kopf{Version} & \kopf{Datum} & \kopf{Kern} \\
+\hline
+1.0 & 2025-01-27 & Erststand: \texttt{text} und \texttt{photo} \\
+1.1 & 2025-02-25 & Feldnamen englisch; ID-System; Text-Stile \\
+1.2 & 2025-03-14 & \feld{id} Pflicht; Array-Reihenfolge als einzige Wahrheit \\
+1.2.1 & 2025-03-14 & Text-Stile wiederhergestellt; Vollbeispiel \\
+1.3 & 2025-04-04 & \texttt{separator}, \texttt{tour}, \texttt{document}, \texttt{audio}, \texttt{map}; Vorwärtskompatibilität verbindlich \\
+1.3.1 & 2025-04-06 & Klarstellungen (PDF-Dokumente, Geodäten-Linie) \\
+1.4 & 2026-04-21 & \feld{source\_album}, \feld{source\_missing}; Cover-Kopie-Regel \\
+1.4.1 & 2026-08-23 & \texttt{link}-Element (Abschnitt~\ref{sec:link}) \\
+1.5 & 2026-09-02 & Text-Stil \texttt{heading}; Markdown-light
+  (Abschnitt~\ref{sec:mdlight}); \feld{source} am Zitat \\
+1.5.1 & 2026-09-15 & \texttt{document}: TXT/MD als aufklappbarer Kasten;
+  \feld{title} steht im Element statt darüber \\
+\hline
+\end{tabularx}
+
+\emph{Anmerkung zur Nummer 1.4.1:} Nach der Versionsregel der MPD-CI
+(Patch-Stellen nur für Errata, neue Fähigkeiten zählen MINOR) hätte das
+\texttt{link}-Element eigentlich \textbf{v1.5} heißen müssen. Die Nummer
+1.4.1 ist jedoch bereits in Server, Repo und gespeicherten Alben
+eingeführt; dieses Dokument behält sie bei. Diese Fassung zählt wieder
+regelkonform: Die Textgestaltungs-Erweiterung ist ein Feature und damit
+MINOR — \textbf{v1.5}.
+
+% ======================================================================
+\section{Ausblick}\label{sec:ausblick}
+
+Die im v1.4.1-Dokument als Entwurf geführten Punkte (\texttt{heading},
+Markdown-light, \texttt{source}) sind in dieser Fassung normativ.
+Weiterhin gilt: \emph{keine} Bildunterschriften in PDX — dateigebundene
+Beschriftungen gehören ins EXIF (\texttt{ImageDescription}); ein
+künftiges Fotobuch-PDF kann sie von dort als klassische
+Bildunterschriften setzen.
+
+% ======================================================================
+\section{Lizenz}
+
+Diese Spezifikation ist offen und frei nutzbar — keine Einschränkungen
+für Implementierung oder Verwendung. Entworfen für die langfristige
+Archivierung persönlicher Foto-Sammlungen in einem menschenlesbaren,
+zukunftssicheren Format.
+
+\end{document}

@@ -1,0 +1,371 @@
+/* MPD — Album Share / Send-Mail / Contacts modals
+ * Extracted from index.html so album.html can reuse the same dialogs.
+ * Three stacked overlays:
+ *   alb-share-overlay (z 11500) → alb-mail-overlay (z 11600) → alb-contacts-overlay (z 11700)
+ * Each overlay closes on backdrop click, ESC, or its own × button.
+ */
+
+/* ── Share-Dialog ──────────────────────────────────────────── */
+.alb-share-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11500;
+    padding: 1rem;
+}
+.alb-share-box {
+    background: var(--surface, #1f1f1f);
+    color: var(--text, #e0e0e0);
+    border: 1px solid var(--border, #333);
+    border-radius: 10px;
+    width: min(520px, 100%);
+    max-height: min(85vh, 720px);
+    display: flex; flex-direction: column;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+}
+.alb-share-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .9rem 1.1rem;
+    border-bottom: 1px solid var(--border, #333);
+}
+.alb-share-header h3 { margin: 0; font-size: 1.05rem; }
+.alb-share-close {
+    background: transparent; border: none;
+    color: var(--muted, #888); font-size: 1.5rem;
+    cursor: pointer; line-height: 1;
+    padding: 0 .2rem;
+}
+.alb-share-close:hover { color: var(--text, #e0e0e0); }
+.alb-share-body {
+    padding: 1rem 1.1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    flex: 1;
+}
+.alb-share-intro {
+    font-size: .85rem;
+    color: var(--muted, #888);
+    margin-bottom: .9rem;
+    line-height: 1.5;
+}
+.alb-share-fresh {
+    background: var(--surface-alt, #141414);
+    border: 1px solid var(--blue, #2E75B6);
+    border-radius: 8px;
+    padding: .7rem .85rem;
+    margin-bottom: 1rem;
+}
+.alb-share-fresh-label {
+    font-size: .78rem; font-weight: 600;
+    color: var(--blue, #2E75B6);
+    margin-bottom: .45rem;
+    letter-spacing: 0.03em;
+}
+.alb-share-fresh-urlrow { margin-bottom: .5rem; }
+.alb-share-fresh-actions {
+    display: flex; gap: .4rem; flex-wrap: wrap;
+}
+.alb-share-fresh-url {
+    width: 100%; box-sizing: border-box;
+    padding: .45rem .55rem;
+    border-radius: 5px;
+    border: 1px solid var(--border, #444);
+    background: var(--surface, #1f1f1f);
+    color: inherit;
+    font: inherit;
+    font-size: .82rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.alb-share-fresh-copy,
+.alb-share-fresh-preview {
+    flex: 0 0 auto;
+    padding: .45rem .7rem;
+    border-radius: 5px;
+    border: 1px solid var(--border, #444);
+    background: var(--surface, #1f1f1f);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: .82rem;
+    white-space: nowrap;
+}
+.alb-share-fresh-copy { min-width: 6.4em; text-align: center; }
+.alb-share-fresh-copy:hover,
+.alb-share-fresh-preview:hover { background: var(--surface-alt, #2a2a2a); }
+.alb-share-fresh-hint {
+    font-size: .75rem;
+    color: var(--muted, #888);
+    margin-top: .4rem;
+}
+.alb-share-list {
+    display: flex; flex-direction: column; gap: .4rem;
+    margin-bottom: 1rem;
+}
+.alb-share-empty {
+    font-size: .85rem;
+    color: var(--muted, #888);
+    padding: .5rem 0;
+}
+.alb-share-row {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .55rem .7rem;
+    background: var(--surface-alt, #141414);
+    border: 1px solid var(--border, #333);
+    border-radius: 6px;
+}
+.alb-share-row-main { flex: 1; min-width: 0; }
+.alb-share-row-hash {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .82rem;
+    color: var(--text, #e0e0e0);
+}
+.alb-share-row-meta {
+    display: flex; gap: .3rem;
+    font-size: .72rem;
+    color: var(--muted, #888);
+    margin-top: .15rem;
+}
+.alb-share-revoke {
+    background: transparent;
+    border: 1px solid var(--border, #444);
+    color: var(--muted, #888);
+    padding: .35rem .5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: .95rem;
+}
+.alb-share-revoke:hover {
+    background: rgba(224, 104, 104, 0.15);
+    color: #e06868;
+    border-color: #e06868;
+}
+.alb-share-revoke svg { width: 14px; height: 14px; display: block; }
+.alb-share-new { margin-bottom: .6rem; display: flex; gap: .5rem; }
+.alb-share-expiry {
+    flex: 0 0 auto;
+    padding: .55rem .4rem;
+    background: var(--surface-alt, #222);
+    color: var(--text, #e0e0e0);
+    border: 1px solid var(--border, #333);
+    border-radius: 6px;
+    font: inherit;
+    font-size: .85rem;
+    cursor: pointer;
+}
+.alb-share-create {
+    flex: 1 1 auto;
+    width: auto;
+    padding: .65rem;
+    background: var(--blue, #2E75B6);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.alb-share-create:hover:not(:disabled) { background: #4F81BD; }
+.alb-share-create:disabled { opacity: 0.5; cursor: not-allowed; }
+.alb-share-status {
+    font-size: .82rem;
+    color: var(--muted, #888);
+    min-height: 1.1em;
+}
+
+/* ── Share-per-Mail Sub-Modal ──────────────────────────────── */
+.alb-mail-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11600;  /* über dem Share-Dialog */
+    padding: 1rem;
+}
+.alb-mail-box {
+    background: var(--surface, #1f1f1f);
+    color: var(--text, #e0e0e0);
+    border: 1px solid var(--border, #333);
+    border-radius: 10px;
+    width: min(480px, 100%);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+}
+.alb-mail-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .9rem 1.1rem;
+    border-bottom: 1px solid var(--border, #333);
+}
+.alb-mail-header h3 { margin: 0; font-size: 1.05rem; }
+.alb-mail-close {
+    background: transparent; border: none;
+    color: var(--muted, #888); font-size: 1.5rem;
+    cursor: pointer; line-height: 1; padding: 0 .2rem;
+}
+.alb-mail-close:hover { color: var(--text, #e0e0e0); }
+.alb-mail-body { padding: 1rem 1.1rem; }
+.alb-mail-intro {
+    font-size: .85rem; color: var(--muted, #888);
+    margin-bottom: .9rem; line-height: 1.5;
+}
+.alb-mail-label {
+    display: block;
+    font-size: .78rem; font-weight: 600;
+    color: var(--text, #e0e0e0);
+    margin: .7rem 0 .3rem;
+}
+.alb-mail-label-opt {
+    font-weight: 400; color: var(--muted, #888);
+}
+.alb-mail-box input,
+.alb-mail-box textarea,
+.alb-mail-box select {
+    width: 100%; box-sizing: border-box;
+    padding: .5rem .6rem;
+    border-radius: 5px;
+    border: 1px solid var(--border, #444);
+    background: var(--surface-alt, #141414);
+    color: inherit;
+    font: inherit;
+    font-size: .88rem;
+}
+.alb-mail-box textarea { resize: vertical; min-height: 3.5em; }
+.alb-mail-status {
+    font-size: .82rem;
+    color: var(--muted, #888);
+    margin-top: .8rem;
+    min-height: 1.1em;
+}
+.alb-mail-actions {
+    display: flex; justify-content: flex-end; gap: .5rem;
+    margin-top: .5rem;
+}
+.alb-mail-cancel,
+.alb-mail-send {
+    padding: .5rem 1rem;
+    border-radius: 6px;
+    font: inherit;
+    cursor: pointer;
+    border: none;
+}
+.alb-mail-cancel {
+    background: transparent;
+    border: 1px solid var(--border, #444) !important;
+    color: var(--text, #e0e0e0);
+}
+.alb-mail-send {
+    background: var(--blue, #2E75B6);
+    color: #fff; font-weight: 600;
+}
+.alb-mail-send:hover:not(:disabled) { background: #4F81BD; }
+.alb-mail-send:disabled,
+.alb-mail-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.alb-share-fresh-mail {
+    flex: 0 0 auto;
+    padding: .45rem .7rem;
+    border-radius: 5px;
+    border: 1px solid var(--border, #444);
+    background: var(--surface, #1f1f1f);
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-size: .82rem;
+    white-space: nowrap;
+}
+.alb-share-fresh-mail:hover { background: var(--surface-alt, #2a2a2a); }
+
+/* Mail-Modal: Label-Zeile mit Verwalten-Link */
+.alb-mail-label-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: .7rem 0 .3rem;
+}
+.alb-mail-label-row .alb-mail-label { margin: 0; }
+.alb-mail-manage {
+    background: transparent;
+    border: none;
+    color: var(--blue, #2E75B6);
+    cursor: pointer;
+    font: inherit;
+    font-size: .75rem;
+    padding: 0;
+    text-decoration: underline;
+}
+.alb-mail-manage:hover { color: #4F81BD; }
+
+/* ── Adressbuch-Verwaltung Sub-Sub-Modal ───────────────────── */
+.alb-contacts-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 11700;  /* über dem Mail-Modal */
+    padding: 1rem;
+}
+.alb-contacts-box {
+    background: var(--surface, #1f1f1f);
+    color: var(--text, #e0e0e0);
+    border: 1px solid var(--border, #333);
+    border-radius: 10px;
+    width: min(440px, 100%);
+    max-height: min(70vh, 600px);
+    display: flex; flex-direction: column;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.5);
+}
+.alb-contacts-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .9rem 1.1rem;
+    border-bottom: 1px solid var(--border, #333);
+}
+.alb-contacts-header h3 { margin: 0; font-size: 1.05rem; }
+.alb-contacts-close {
+    background: transparent; border: none;
+    color: var(--muted, #888); font-size: 1.5rem;
+    cursor: pointer; line-height: 1; padding: 0 .2rem;
+}
+.alb-contacts-close:hover { color: var(--text, #e0e0e0); }
+.alb-contacts-body {
+    padding: 1rem 1.1rem;
+    overflow-y: auto;
+    overscroll-behavior: contain; flex: 1;
+}
+.alb-contacts-intro {
+    font-size: .82rem; color: var(--muted, #888);
+    margin-bottom: .8rem; line-height: 1.5;
+}
+.alb-contacts-list {
+    display: flex; flex-direction: column; gap: .4rem;
+}
+.alb-contacts-empty {
+    font-size: .85rem; color: var(--muted, #888);
+    padding: .6rem 0;
+}
+.alb-contacts-row {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .55rem .7rem;
+    background: var(--surface-alt, #141414);
+    border: 1px solid var(--border, #333);
+    border-radius: 6px;
+}
+.alb-contacts-row-main { flex: 1; min-width: 0; }
+.alb-contacts-row-email {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .82rem; word-break: break-all;
+}
+.alb-contacts-row-meta {
+    display: flex; gap: .3rem; flex-wrap: wrap;
+    font-size: .72rem;
+    color: var(--muted, #888);
+    margin-top: .15rem;
+}
+.alb-contacts-del {
+    background: transparent;
+    border: 1px solid var(--border, #444);
+    color: var(--muted, #888);
+    padding: .35rem .5rem;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: .95rem;
+}
+.alb-contacts-del:hover {
+    background: rgba(224, 104, 104, 0.15);
+    color: #e06868;
+    border-color: #e06868;
+}
+.alb-contacts-del svg { width: 14px; height: 14px; display: block; }

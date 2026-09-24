@@ -1,0 +1,68 @@
+/* Durchlauf-Ansicht (08.09.2026): alles Unzugeordnete eines Bestands.
+   Eigene, schlichte Kachelansicht — bewusst nicht die Justified-Zeilen
+   des Albums: hier wird ausgewaehlt und verschoben, nicht gestaltet. */
+
+.dl-body { background: var(--bg); color: var(--text); min-height: 100vh; margin: 0; }
+.dl-main { max-width: 1600px; margin: 0 auto; padding: 1rem 1.2rem 7rem; }
+.dl-intro { color: var(--muted, #888); font-size: .9rem; margin: .2rem 0 1rem; }
+
+.dl-space-toggle { display: inline-flex; border: 1px solid var(--border, #444); border-radius: 999px; overflow: hidden; margin-right: .4rem; }
+.dl-space-btn { border: none; background: none; color: var(--muted, #aaa); padding: .3rem .8rem; font: inherit; font-size: .8rem; cursor: pointer; }
+.dl-space-btn.active { background: var(--blue, #2E75B6); color: var(--text-on-accent, #fff); }
+.dl-space-btn[hidden] { display: none; }
+
+.dl-group { margin-bottom: 1.4rem; }
+.dl-group-head { display: flex; align-items: baseline; gap: .6rem; margin: 0 0 .5rem; }
+.dl-group-date { font-size: .95rem; font-weight: 600; }
+.dl-group-count { font-size: .8rem; color: var(--muted, #888); }
+.dl-group-pick { margin-left: auto; border: none; background: none; color: var(--muted, #888); font: inherit; font-size: .78rem; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.dl-group-pick:hover { color: var(--text); }
+
+.dl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+@media (max-width: 480px) { .dl-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; } }
+
+.dl-tile { position: relative; aspect-ratio: 1; border-radius: 4px; overflow: hidden; background: var(--surface-alt, #222); cursor: pointer; border: 2px solid transparent; transition: border-color .12s, transform .12s; user-select: none; -webkit-tap-highlight-color: transparent; }
+.dl-tile img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .3s; }
+.dl-tile img.loaded { opacity: 1; }
+.dl-tile .dl-ph { position: absolute; inset: 0; background-size: cover; background-position: center; filter: blur(0.5px); }
+.dl-tile.selected { border-color: var(--gold, #f0c040); }
+.dl-tile.selected::after { content: "✓"; position: absolute; top: 6px; left: 6px; width: 22px; height: 22px; border-radius: 50%; background: var(--gold, #f0c040); color: #222; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.dl-tile .dl-badge { position: absolute; left: 6px; bottom: 6px; max-width: calc(100% - 12px); padding: 2px 6px; border-radius: 3px; background: rgba(0,0,0,.6); color: #fff; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.dl-tile .dl-video { position: absolute; right: 6px; top: 6px; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: 10px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.dl-tile .dl-zoom { position: absolute; right: 4px; bottom: 4px; width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; opacity: 0; transition: opacity .15s; display: flex; align-items: center; justify-content: center; }
+.dl-tile:hover .dl-zoom { opacity: .9; }
+@media (hover: none) { .dl-tile .dl-zoom { opacity: .8; } }
+.dl-tile .dl-zoom svg { width: 15px; height: 15px; }
+.dl-tile.busy { opacity: .4; pointer-events: none; }
+
+.dl-status { text-align: center; color: var(--muted, #888); font-size: .85rem; padding: 1rem; }
+.dl-sentinel { height: 1px; }
+
+.dl-bar, .dl-yearbar { position: fixed; left: 50%; bottom: calc(1rem + var(--inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: .5rem; padding: .5rem .8rem; border-radius: 999px; background: var(--surface, #1f1f1f); border: 1px solid var(--border, #444); box-shadow: 0 6px 24px rgba(0,0,0,.35); z-index: 500; max-width: calc(100vw - 1.5rem); flex-wrap: wrap; justify-content: center; }
+.dl-bar[hidden], .dl-yearbar[hidden] { display: none; }
+.dl-bar-count { font-size: .85rem; padding: 0 .3rem; white-space: nowrap; }
+.dl-bar-spacer { flex: 0 0 .3rem; }
+.dl-bar-btn { border: none; border-radius: 999px; padding: .45rem .9rem; font: inherit; font-size: .85rem; cursor: pointer; background: var(--blue, #2E75B6); color: var(--text-on-accent, #fff); white-space: nowrap; }
+.dl-bar-btn--ghost { background: transparent; color: var(--muted, #aaa); padding: .45rem .5rem; }
+.dl-bar-btn--ghost:hover { color: var(--text); }
+.dl-bar-btn--danger { background: rgba(211,47,47,.85); }
+.dl-bar-btn:disabled { opacity: .5; cursor: default; }
+
+/* Einsortieren-Dialog */
+.dl-modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 12000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.dl-modal-box { background: var(--surface, #1f1f1f); color: var(--text); border-radius: 12px; width: min(520px, 100%); max-height: min(80vh, 640px); display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,.5); }
+.dl-modal-head { padding: .9rem 1rem .5rem; font-weight: 600; }
+.dl-modal-search { margin: 0 1rem .6rem; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--border, #444); background: var(--bg); color: var(--text); font: inherit; }
+.dl-modal-list { overflow-y: auto; padding: 0 .5rem .5rem; }
+.dl-modal-item { display: flex; align-items: center; gap: .6rem; width: 100%; border: none; background: none; color: var(--text); text-align: left; padding: .5rem .6rem; border-radius: 8px; cursor: pointer; font: inherit; }
+.dl-modal-item:hover { background: var(--surface-alt, #2a2a2a); }
+.dl-modal-item .dl-modal-year { color: var(--muted, #888); font-size: .8rem; min-width: 3em; }
+.dl-modal-item .dl-modal-recent { margin-left: auto; color: var(--muted, #888); font-size: .75rem; }
+.dl-modal-foot { display: flex; justify-content: flex-end; padding: .5rem 1rem .9rem; }
+.dl-modal-empty { padding: 1rem; color: var(--muted, #888); font-size: .85rem; }
+
+/* Ordner ohne album.json — Scan-Kandidaten, keine Kacheln */
+.dl-unscanned { margin: 0 0 1rem; display: flex; flex-direction: column; gap: .3rem; }
+.dl-unscanned-row { display: flex; align-items: center; gap: .8rem; padding: .5rem .8rem; border-radius: 8px; background: var(--surface, #1f1f1f); border: 1px dashed var(--border, #444); font-size: .85rem; }
+.dl-unscanned-link { margin-left: auto; color: var(--blue, #5B9BD5); white-space: nowrap; text-decoration: none; font-weight: 600; }
+.dl-unscanned-link:hover { text-decoration: underline; }

@@ -1,0 +1,2770 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/brand/mpd-icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/img/brand/mpd-icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/brand/mpd-icon-180.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#F4EFE6">
+    <title>My Photo Diary</title>
+    <link rel="stylesheet" href="/css/fonts.css">
+    <link rel="stylesheet" href="/css/style.css?v=8">
+    <link rel="stylesheet" href="/css/album-share.css">
+    <link rel="stylesheet" href="/css/index.css?v=6">
+    <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("mpd-theme")||"dark")</script>
+    <script>
+    // WebView-recreation recovery: Android can destroy+recreate the WebView
+    // Activity on orientation change, landing on index.html instead of the
+    // album the user had open. If localStorage has a recent album URL (< 12s)
+    // and goBack() did NOT set the intentional-nav flag, redirect back.
+    (function() {
+        try {
+            var r = localStorage.getItem('mpd-resume');
+            if (!r) return;
+            var d = JSON.parse(r);
+            if (d && d.url && (Date.now() - d.ts) < 60000) {
+                localStorage.removeItem('mpd-resume');
+                location.replace(d.url);
+            } else {
+                localStorage.removeItem('mpd-resume');
+            }
+        } catch(e) {}
+    })();
+    </script>
+    <!-- mpd-dialog.js fruehe Ladung (mpdToast in der Lupe-Save-Logik). -->
+    <script src="/js/mpd-dialog.js?v=3"></script>
+    <!-- i18n-Scaffold (Phase 2): Detection, data-i18n-Scanner, Umschalter. Inline-Locales. -->
+    <script src="/js/i18n.js?v=48"></script>
+    <script src="/js/version-watch.js?v=5"></script>
+    <!-- Share / Mail / Contacts modals — shared by index.html + album.html -->
+    <script src="/js/album-share.js?v=4"></script>
+</head>
+<body>
+    <header class="main-header">
+        <a href="/" class="header-brand" style="text-decoration:none;color:inherit;cursor:pointer" data-i18n-attr="title:nav.brand_title" title="Zur Startseite">
+            <img class="header-icon" src="/img/brand/mpd-logo.svg" alt="My Photo Diary">
+
+            <div class="header-titles">
+                <span class="header-name">My Photo Diary</span>
+                <span class="header-name-short">MPD</span>
+                <span class="header-slogan">where your memories stay yours.</span>
+            </div>
+        </a>
+        <div class="header-stats" id="header-stats"></div>
+        <!-- MPD Search – Desktop only, via style.css media query -->
+        <div class="mpd-search-wrap" id="mpd-search-wrap">
+            <div class="mpd-search-inner">
+                <svg class="mpd-search-logo" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="38" y="18" width="92" height="118" rx="6" fill="#1a2a3a" stroke="#2E75B6" stroke-width="1.5"/>
+                    <rect x="38" y="18" width="10" height="118" rx="3" fill="#2E75B6" opacity="0.7"/>
+                    <line x1="56" y1="36" x2="122" y2="36" stroke="#2E75B6" stroke-width="1.1" opacity="0.45"/>
+                    <line x1="56" y1="48" x2="122" y2="48" stroke="#2E75B6" stroke-width="1.1" opacity="0.45"/>
+                    <line x1="56" y1="60" x2="104" y2="60" stroke="#2E75B6" stroke-width="1.1" opacity="0.45"/>
+                    <circle cx="78" cy="76" r="29" fill="#2C3E50" stroke="#4F81BD" stroke-width="2"/>
+                    <circle cx="78" cy="76" r="22" fill="#111d28" stroke="#2E75B6" stroke-width="1.2"/>
+                    <line x1="60" y1="69" x2="96" y2="69" stroke="#4F81BD" stroke-width="1.4" opacity="0.7"/>
+                    <line x1="60" y1="77" x2="96" y2="77" stroke="#4F81BD" stroke-width="1.4" opacity="0.7"/>
+                    <line x1="60" y1="85" x2="84" y2="85" stroke="#4F81BD" stroke-width="1.4" opacity="0.7"/>
+                    <circle cx="68" cy="66" r="5" fill="#4F81BD" opacity="0.18"/>
+                    <circle cx="66" cy="64" r="2.5" fill="#ffffff" opacity="0.12"/>
+                    <line x1="100" y1="98" x2="128" y2="126" stroke="#c8922a" stroke-width="5.5" stroke-linecap="round"/>
+                    <line x1="100" y1="98" x2="128" y2="126" stroke="#e8b040" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+                </svg>
+                <span class="mpd-search-brand-text">MPD Search</span>
+                <span class="mpd-search-divider">|</span>
+                <input id="mpd-search-input" type="text" data-i18n-attr="placeholder:nav.search_placeholder" placeholder="Erinnerungen suchen …" autocomplete="off" autocorrect="off" spellcheck="false">
+                <span class="mpd-search-kbd">⌘K</span>
+            </div>
+            <div id="mpd-search-dropdown"></div>
+        </div>
+        <div class="header-controls">
+            <button class="btn-add-album" id="btn-add-album" onclick="openScanModal()" data-i18n-attr="title:nav.btn_add_album_title" title="Ordner ohne Album suchen">+ Album</button>
+            <div class="user-avatar" id="user-avatar" title="" onclick="toggleUserMenu(event)">
+                <span id="avatar-initial">?</span>
+                <div id="user-menu" class="user-menu" style="display:none;">
+                    <div class="user-menu-info"><strong id="menu-username">?</strong><br><span id="menu-role"></span></div>
+                    <button onclick="doLogout()" data-i18n="nav.btn_logout">Abmelden</button>
+                </div>
+            </div>
+            <span class="user-role" id="user-role"></span>
+            <button id="hamburger-btn" class="icon-button" data-i18n-attr="title:nav.btn_menu_title" title="Menü" onclick="toggleHamburger()" style="padding:0.4rem 0.6rem;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <line x1="3" y1="12" x2="21" y2="12"/>
+                    <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+        </div>
+        <div id="hamburger-menu" class="hamburger-menu" style="display:none;">
+            <div style="padding:6px 12px 4px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;" data-i18n="nav.section_view">Anzeige</div>
+            <button class="hamburger-item space-filter-btn active" data-val="all"     onclick="setSpaceFilter('all',this)" data-i18n="nav.filter_all">Alle Alben</button>
+            <button class="hamburger-item space-filter-btn"        data-val="shared"  onclick="setSpaceFilter('shared',this)" data-i18n="nav.filter_shared">Shared</button>
+            <button class="hamburger-item space-filter-btn"        data-val="personal" onclick="setSpaceFilter('personal',this)" data-i18n="nav.filter_personal">Personal</button>
+            <div style="padding:8px 12px 4px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border,#333);margin-top:4px;" data-i18n="nav.section_discover">Entdecken</div>
+            <button id="hamburger-item-search" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/search';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span data-i18n="nav.item_search">Suchen</span>
+            </button>
+            <button id="hamburger-item-tours" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/tours';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+                    <line x1="8" y1="2" x2="8" y2="18"/>
+                    <line x1="16" y1="6" x2="16" y2="22"/>
+                </svg>
+                <span data-i18n="nav.item_tours">Tours</span>
+            </button>
+            <button id="hamburger-item-trails" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/trails';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+                </svg>
+                <span data-i18n="nav.item_trails">Trails</span>
+            </button>
+            <button class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/verbinden';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="5" y="2" width="14" height="20" rx="2"/>
+                    <line x1="12" y1="18" x2="12.01" y2="18"/>
+                </svg>
+                <span data-i18n="nav.item_connect">App verbinden</span>
+            </button>
+            <button id="hamburger-item-durchlauf" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/durchlauf';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+                    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+                </svg>
+                <span data-i18n="nav.item_durchlauf">Durchlauf</span>
+            </button>
+            <button id="hamburger-item-stats" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/stats';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="20" x2="12" y2="10"/>
+                    <line x1="18" y1="20" x2="18" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="16"/>
+                </svg>
+                <span data-i18n="nav.item_stats">Stats</span>
+            </button>
+            <div style="padding:8px 12px 4px;font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;border-top:1px solid var(--border,#333);margin-top:4px;" data-i18n="nav.section_tools">Werkzeuge</div>
+            <button class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; toggleThemePicker();">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/>
+                    <circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/>
+                    <circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/>
+                    <circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/>
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-4.96-4.49-9-10-9z"/>
+                </svg>
+                <span data-i18n="nav.item_themes">Themes</span>
+            </button>
+            <button class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.location.href='/hilfe';">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span data-i18n="nav.help">Hilfe</span>
+            </button>
+            <button class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; _openSettingsModal();">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span data-i18n="nav.item_settings">Einstellungen</span>
+            </button>
+            <button id="hamburger-users-admin" class="hamburger-item" style="display:none;" onclick="document.getElementById('hamburger-menu').style.display='none'; _openUserAdminModal();">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span data-i18n="nav.item_users">Benutzer</span>
+            </button>
+            <div id="mpd-version-badge" role="button" tabindex="0" title="Über My Photo Diary" onclick="document.getElementById('hamburger-menu').style.display='none'; _openAboutDialog();" style="padding:6px 12px 2px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border,#333);margin-top:4px;text-align:center;cursor:pointer;"></div>
+            <button id="hamburger-lang-toggle" class="hamburger-item" onclick="document.getElementById('hamburger-menu').style.display='none'; window.MPD_I18N && window.MPD_I18N.setLang(window.MPD_I18N.getLang()==='de'?'en':'de');">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                </svg>
+                <span id="hamburger-lang-toggle-label">English</span>
+            </button>
+        </div>
+    </header>
+    <!-- Memories-Web-Seite 09/2026 stillgelegt — Erinnerungen zeigt die App.
+         Der Teaser bleibt als Hinweis, verlinkt aber nichts mehr. -->
+    <div id="memories-teaser" class="memories-teaser" hidden
+         role="button" tabindex="0" onclick="openMemoriesOverlay()"
+         onkeydown="if(event.key==='Enter')openMemoriesOverlay()">
+        <span class="mt-icon">✦</span>
+        <span class="mt-text" id="memories-teaser-text"></span>
+        <span class="mt-arrow">›</span>
+    </div>
+
+    <!-- Memories-Overlay: Jahresblöcke, Klick auf Foto führt ins Album -->
+    <div id="mem-overlay" class="mem-overlay" hidden>
+        <div class="mem-box" role="dialog" aria-modal="true">
+            <div class="mem-header">
+                <span class="mt-icon">✦</span>
+                <h2 id="mem-title"></h2>
+                <button type="button" class="mem-close" onclick="closeMemoriesOverlay()" aria-label="Schließen">&times;</button>
+            </div>
+            <div class="mem-body" id="mem-body"></div>
+        </div>
+    </div>
+    <div class="container">
+        <div id="content"><div class="loading" data-i18n="index.loading_albums">Lade Alben</div></div>
+    </div>
+    <footer class="album-footer">
+        <p>My Photo Diary &middot; where your memories stay yours.</p>
+        <p>&copy; 2026 Thomas Bugge &middot; <span class="mpd-version-text"></span></p>
+    </footer>
+    <script>
+        const API_BASE = window.location.origin;
+        let allAlbums = [];
+        let spaceFilter = 'all';
+        let isDemo = false;
+        let currentRole = '';   // 'admin' | 'editor' | 'viewer' | ''
+        // Freigeschaltete Zusatzmodule (aus /api/whoami). null = unbekannt/alle
+        // (z.B. whoami-Fehler) → nichts ausblenden.
+        let userModules = null;
+        const hasModule = (k) => !userModules || userModules.includes(k);
+
+        // "Über"-Dialog — vom anklickbaren Versions-Badge im Hamburger-Menü.
+        // Schlanker eigener <dialog>, der die vorhandenen .mpd-dialog-Styles
+        // wiederverwendet. Inhalt bewusst minimal und wahr: Name, Slogan,
+        // Version, Build-Datum, Autor (kein Handbuch-Link — /docs wird nicht
+        // serviert).
+        async function _openAboutDialog() {
+            const en  = window.MPD_I18N && window.MPD_I18N.getLang && window.MPD_I18N.getLang() === 'en';
+            let version = '', build = '';
+            try {
+                const r = await fetch('/api/version', { cache: 'no-store' });
+                const d = await r.json();
+                version = d.version ? ('v' + d.version) : '';
+                build   = d.build_date || '';
+            } catch (_) { /* offline: Dialog trotzdem zeigen */ }
+
+            const row = (k, v) => v
+                ? `<div style="display:flex;justify-content:space-between;gap:16px;padding:3px 0;font-size:.85rem"><span style="color:var(--text-muted)">${k}</span><span>${v}</span></div>`
+                : '';
+
+            const dlg = document.createElement('dialog');
+            dlg.className = 'mpd-dialog';
+            dlg.innerHTML =
+                `<div class="mpd-dialog__inner">
+                    <img src="/img/brand/mpd-logo.svg" alt="" style="width:48px;height:48px;margin:0 auto 8px;display:block">
+                    <h2 class="mpd-dialog__title" style="text-align:center">My Photo Diary</h2>
+                    <div class="mpd-dialog__subtitle" style="text-align:center">where your memories stay yours.</div>
+                    <div class="mpd-dialog__body" style="margin-top:12px">
+                        ${row('Version', version)}
+                        ${row('Build', build)}
+                        ${row(en ? 'Author' : 'Autor', 'Thomas Bugge')}
+                    </div>
+                    <div class="mpd-dialog__actions">
+                        <button class="mpd-dialog__btn mpd-dialog__btn--confirm">${en ? 'Close' : 'Schließen'}</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(dlg);
+            const close = () => { try { dlg.close(); } catch (_) {} setTimeout(() => dlg.remove(), 160); };
+            dlg.querySelector('.mpd-dialog__btn').addEventListener('click', close);
+            dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
+            dlg.addEventListener('cancel', (e) => { e.preventDefault(); close(); });
+            dlg.showModal();
+            dlg.querySelector('.mpd-dialog__btn').focus();
+        }
+        let appSettings = {     // globale Feature-Schalter, via /api/settings
+            share_enabled        : true,
+            demo_enabled         : true,
+            memories_push_enabled: true,
+        };
+
+        async function loadAppSettings() {
+            try {
+                const r = await fetch(`${API_BASE}/api/settings`);
+                if (!r.ok) return;
+                const d = await r.json();
+                appSettings = { ...appSettings, ...d };
+            } catch { /* stumm, Defaults bleiben */ }
+        }
+
+        function _canEditAlbum(album) {
+            if (isDemo) return false;
+            if (currentRole === 'admin')  return true;
+            if (currentRole === 'editor') return album.space === 'personal';
+            return false;
+        }
+
+        async function loadAlbums() {
+            try {
+                // whoami parallel starten, aber nicht awaiten — sonst blockt die
+                // UI-Render-Zeit auf den (potenziell langsamen) whoami-Roundtrip.
+                const whoamiPromise = fetch(`${API_BASE}/api/whoami`).then(r => r.json()).catch(() => ({}));
+
+                const response = await fetch(`${API_BASE}/api/albums`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                allAlbums = data.albums;
+
+                renderAlbums();
+                renderStats();
+                // Sprung aus der Durchlauf-Ansicht: /?scan=1 oeffnet „Album hinzufuegen"
+                if (new URLSearchParams(location.search).get('scan') === '1') {
+                    history.replaceState(null, '', '/');
+                    openScanModal();
+                }
+
+                // Rolle/Avatar/Demo-Flag nachziehen, sobald whoami da ist.
+                // Settings parallel holen.
+                loadAppSettings().then(() => renderAlbums());
+                whoamiPromise.then(whoami => {
+                    const username = whoami.user || '';
+                    const role     = whoami.role || '';
+                    isDemo      = !!whoami.is_demo;
+                    currentRole = role;
+                    userModules = Array.isArray(whoami.modules) ? whoami.modules : null;
+                    window.MPD_MODULES = userModules;
+                    // Gesperrte Module (09.09.2026): im MENUE
+                    // sichtbar lassen, mit Schloss, Antippen oeffnet das Schaufenster —
+                    // was kann das Modul, wie schaltet man es frei. Aus der KOPFZEILE
+                    // (Suchfeld, Kacheln) bleiben sie draussen: die ist Arbeitsflaeche.
+                    [['tours','hamburger-item-tours'], ['trails','hamburger-item-trails'],
+                     ['search','hamburger-item-search'], ['stats','hamburger-item-stats']]
+                        .forEach(([mod, id]) => {
+                            if (hasModule(mod)) return;
+                            const el = document.getElementById(id);
+                            if (!el) return;
+                            el.classList.add('locked');
+                            el.onclick = () => { document.getElementById('hamburger-menu').style.display = 'none'; _openPlusWindow(mod); };
+                        });
+                    if (!hasModule('search')) { const sw = document.getElementById('mpd-search-wrap'); if (sw) sw.style.display = 'none'; }
+                    // Albums neu zeichnen, damit Kebab-Menue (rollenabhaengig) auftaucht
+                    renderAlbums();
+                    _loadDurchlaufCount(whoami);
+
+                    if (isDemo) {
+                        const searchWrap = document.getElementById('mpd-search-wrap');
+                        if (searchWrap) searchWrap.style.display = 'none';
+                        // Demo sieht nur den eigenen Bereich (available_spaces) —
+                        // der Shared-Filter fände nie etwas und sah aus wie ein Fehler.
+                        const sharedBtn = document.querySelector('.space-filter-btn[data-val="shared"]');
+                        if (sharedBtn) sharedBtn.style.display = 'none';
+                        for (const id of ['hamburger-item-tours', 'hamburger-item-trails']) {
+                            const el = document.getElementById(id);
+                            if (el) el.style.display = 'none';
+                        }
+                        const teaser = document.getElementById('memories-teaser');
+                        if (teaser) teaser.hidden = true;
+                    }
+                    document.getElementById('avatar-initial').textContent = username ? username[0].toUpperCase() : '?';
+                    document.getElementById('user-avatar').title = `${username} · ${role}`;
+                    document.getElementById('user-role').textContent = role;
+                    document.getElementById('menu-username').textContent = username;
+                    document.getElementById('menu-role').textContent = role;
+
+                    if (role !== 'admin' && role !== 'editor') {
+                        const menu = document.getElementById('hamburger-menu');
+                        if (menu) menu.style.display = 'none';
+                    }
+                    if (role === 'admin' || role === 'editor') {
+                        const btn = document.getElementById('btn-add-album');
+                        if (btn) btn.style.display = 'inline-block';
+                        const fab = document.getElementById('fab-add-album');
+                        if (fab) fab.classList.add('visible');
+                    }
+                    if (role === 'admin') {
+                        const ua = document.getElementById('hamburger-users-admin');
+                        if (ua) ua.style.display = '';
+                    }
+                    // Stats neu zeichnen (isDemo beeinflusst Stats-Pills)
+                    renderStats();
+                });
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function renderStats() {
+            const statsEl = document.getElementById('header-stats');
+            if (!statsEl) return;
+            const filtered = spaceFilter === 'all' ? allAlbums
+                : allAlbums.filter(a => a.space === spaceFilter);
+            const totalAlbums = filtered.length;
+            const totalPhotos = filtered.reduce((sum, a) => sum + (a.photo_count || 0), 0);
+            const totalVideos = filtered.reduce((sum, a) => sum + (a.video_count || 0), 0);
+            // Stat-pill-Icons im selben Lucide-Vokabular wie Header/Lightbox.
+            const _SVG = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+            const SP_FOLDER = `<svg viewBox="0 0 24 24" ${_SVG}><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+            const SP_PHOTO  = `<svg viewBox="0 0 24 24" ${_SVG}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+            const SP_VIDEO  = `<svg viewBox="0 0 24 24" ${_SVG}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>`;
+            const SP_STATS  = `<svg viewBox="0 0 24 24" ${_SVG}><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>`;
+            const SP_MAP    = `<svg viewBox="0 0 24 24" ${_SVG}><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>`;
+            const SP_COMPASS = `<svg viewBox="0 0 24 24" ${_SVG}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`;
+            // Zwei Gruppen, die bisher gleich aussahen (08.09.2026): links
+            // die ZAHLEN (Anzeige, nicht klickbar, matt ohne Rahmen), dann ein
+            // Abstand, dann die EINSTIEGE als Knoepfe — Reihenfolge nach „wie
+            // oft schaut man hin": Durchlauf (traegt Zahl, meldet Arbeit),
+            // Trails (taeglich), Tours (beim Gestalten), Stats (selten),
+            // Themes (aendert Aussehen, nicht Inhalt). Gleiche Reihe in der App.
+            const _tn = (k, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k) : fb) || fb;
+            let html = `<div class="stat-pill stat-pill--count">${SP_FOLDER}<strong>${totalAlbums}</strong> Alben</div>`;
+            html += `<div class="stat-pill stat-pill--count">${SP_PHOTO}<strong>${totalPhotos.toLocaleString('de-DE')}</strong> Fotos</div>`;
+            if (totalVideos > 0) html += `<div class="stat-pill stat-pill--count">${SP_VIDEO}<strong>${totalVideos}</strong> Videos</div>`;
+            if (!isDemo) {
+                html += `<span class="stat-pill-gap" aria-hidden="true"></span>`;
+                // Durchlauf (Grundpaket): Zaehler kommt asynchron aus
+                // /api/timeline?referenced=false (s. _loadDurchlaufCount).
+                const SP_INBOX = `<svg viewBox="0 0 24 24" ${_SVG}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`;
+                const SP_THEME = `<svg viewBox="0 0 24 24" ${_SVG}><circle cx="13.5" cy="6.5" r="1.2" fill="currentColor"/><circle cx="17.5" cy="10.5" r="1.2" fill="currentColor"/><circle cx="8.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-.99 0-.83.67-1.5 1.5-1.5H16c3.31 0 6-2.69 6-6 0-5.17-4.5-9-10-9z"/></svg>`;
+                html += `<a href="/durchlauf" id="durchlauf-pill" class="stat-pill stat-pill--btn" style="color:#e8a030;border-color:rgba(232,160,48,.3)">${SP_INBOX}${_tn('nav.item_durchlauf', 'Durchlauf')}<span id="durchlauf-pill-count"></span></a>`;
+                if (hasModule('trails')) html += `<a href="/trails" class="stat-pill stat-pill--btn" style="color:#7ec8e3;border-color:rgba(126,200,227,.3)">${SP_COMPASS}${_tn('nav.item_trails', 'Trails')}</a>`;
+                if (hasModule('tours'))  html += `<a href="/tours" class="stat-pill stat-pill--btn" style="color:#43c98c;border-color:rgba(67,201,140,.3)">${SP_MAP}${_tn('nav.item_tours', 'Tours')}</a>`;
+                if (hasModule('stats'))  html += `<a href="/stats" class="stat-pill stat-pill--btn" style="color:#f0c040;border-color:rgba(240,192,64,.3)">${SP_STATS}${_tn('nav.item_stats', 'Stats')}</a>`;
+                html += `<button type="button" class="stat-pill stat-pill--btn" style="color:#b48ee6;border-color:rgba(180,142,230,.3)" onclick="toggleThemePicker()">${SP_THEME}${_tn('nav.item_themes', 'Themes')}</button>`;
+                if (typeof _durchlaufTotal === 'number') _renderDurchlaufCount();
+            }
+            statsEl.innerHTML = html;
+        }
+
+        // Durchlauf-Zaehler fuer die Kachel: alles Unzugeordnete in den
+        // Bestaenden, in denen das Konto beitragen darf. Ein Aufruf je
+        // Bestand mit limit=1 — total kommt aus dem Server.
+        let _durchlaufTotal = null;
+        function _renderDurchlaufCount() {
+            const el = document.getElementById('durchlauf-pill-count');
+            if (el) el.textContent = _durchlaufTotal > 0 ? ` · ${_durchlaufTotal}` : '';
+        }
+        async function _loadDurchlaufCount(whoami) {
+            const rights = (whoami && whoami.rights) || {};
+            const spaces = ['shared', 'personal'].filter(s => (rights[s] || []).includes('contribute'));
+            const pill = document.getElementById('durchlauf-pill');
+            const item = document.getElementById('hamburger-item-durchlauf');
+            if (!spaces.length) { if (pill) pill.style.display = 'none'; if (item) item.style.display = 'none'; return; }
+            try {
+                const totals = await Promise.all(spaces.map(s =>
+                    fetch(`${API_BASE}/api/timeline?space=${s}&referenced=false&folder=durchlauf,album&limit=1`)
+                        .then(r => r.ok ? r.json() : { total: 0 }).then(d => d.total || 0)));
+                _durchlaufTotal = totals.reduce((a, b) => a + b, 0);
+                _renderDurchlaufCount();
+            } catch (_) {}
+        }
+
+        // Schaufenster fuer ein gesperrtes Modul: ein Absatz, was es kann, und
+        // der Weg zur Freischaltung. Kein Kaufknopf — MPD hat keinen Shop.
+        function _openPlusWindow(mod) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const name = _t('nav.item_' + mod, null, mod);
+            if (typeof window.mpdAlert !== 'function') return;
+            window.mpdAlert({
+                icon : '🔒',
+                title: _t('plus.locked_title', { name }, name + ' gehört zu MPD Plus'),
+                body : _t('plus.desc_' + mod, null, '') + '\n\n' + _t('plus.how', null, 'Freischalten: Der Verwalter trägt die Plus-Lizenz in den Einstellungen ein.'),
+            });
+        }
+
+        function toggleHamburger() {
+            const menu = document.getElementById('hamburger-menu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+        // Sprach-Umschalter-Label: zeigt immer die Alternativ-Sprache.
+        // Globe-SVG bleibt im Button — wir tauschen nur den Text-Span.
+        document.addEventListener('mpd-i18n-ready', e => {
+            const label = document.getElementById('hamburger-lang-toggle-label');
+            if (!label) return;
+            label.textContent = (e.detail.lang === 'de') ? 'English' : 'Deutsch';
+        });
+        function toggleUserMenu(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('user-menu');
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+        async function doLogout() {
+            await fetch(`${API_BASE}/api/logout`, {method: 'POST'});
+            window.location.href = '/login';
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#hamburger-btn') && !e.target.closest('#hamburger-menu')) {
+                const menu = document.getElementById('hamburger-menu');
+                if (menu) menu.style.display = 'none';
+            }
+            if (!e.target.closest('#user-avatar')) {
+                const um = document.getElementById('user-menu');
+                if (um) um.style.display = 'none';
+            }
+        });
+
+        function setSpaceFilter(val, btn) {
+            spaceFilter = val;
+            document.querySelectorAll('.space-filter-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            const menu = document.getElementById('hamburger-menu');
+            if (menu) menu.style.display = 'none';
+            renderAlbums();
+            renderStats();
+        }
+
+        function getFilteredAlbums() {
+            const albums = spaceFilter === 'all' ? allAlbums
+                : allAlbums.filter(a => a.space === spaceFilter);
+            return [...albums].sort((a, b) => a.title.localeCompare(b.title, 'de'));
+        }
+
+        function sortAlbums(albums, sortBy) {
+            const sorted = [...albums]; // Kopie erstellen
+            
+            switch(sortBy) {
+                case 'year-desc':
+                    // Neueste zuerst (Google Photos Style)
+                    return sorted.sort((a, b) => {
+                        const yearA = parseInt(a.year) || 0;
+                        const yearB = parseInt(b.year) || 0;
+                        return yearB - yearA;
+                    });
+                
+                case 'year-asc':
+                    // Älteste zuerst
+                    return sorted.sort((a, b) => {
+                        const yearA = parseInt(a.year) || 0;
+                        const yearB = parseInt(b.year) || 0;
+                        return yearA - yearB;
+                    });
+                
+                case 'title-asc':
+                    // Titel A-Z
+                    return sorted.sort((a, b) => a.title.localeCompare(b.title, 'de'));
+                
+                case 'title-desc':
+                    // Titel Z-A
+                    return sorted.sort((a, b) => b.title.localeCompare(a.title, 'de'));
+                
+                default:
+                    return sorted;
+            }
+        }
+
+        function changeSorting() {
+            const select = document.getElementById('sort-select');
+            currentSort = select.value;
+            renderAlbums(sortAlbums(allAlbums, currentSort));
+        }
+
+        function renderAlbums() {
+            const albums = getFilteredAlbums();
+            const content = document.getElementById('content');
+            if (albums.length === 0) {
+                content.innerHTML = '<div class="error"><h2>Keine Alben gefunden</h2></div>';
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'album-grid';
+
+            albums.forEach(album => {
+                const card = createAlbumCard(album);
+                grid.appendChild(card);
+            });
+
+            content.innerHTML = '';
+            content.appendChild(grid);
+        }
+
+        function createAlbumCard(album) {
+            const card = document.createElement('div');
+            card.className = `album-card space-${album.space}`;
+            card.onclick = () => window.location.href = `/album.html?space=${encodeURIComponent(album.space)}&name=${encodeURIComponent(album.name)}`;
+
+            const thumbnailUrl = `${API_BASE}/api/thumbnail/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/${encodeURIComponent(album.thumbnail)}?size=sm`;
+
+            // Gesamt-Elementzahl (Foto + Video) als ein Wert — minimalistisch,
+            // knapp, theme-übergreifend angemessen.
+            const total = (album.photo_count || 0) + (album.video_count || 0);
+            const stats = total === 0 ? '' : (total === 1 ? '1 Element' : `${total} Elemente`);
+
+            const badgeLabel = album.space === 'personal' ? 'personal' : 'shared';
+
+            card.innerHTML = `
+                <div class="album-cover">
+                    <div class="album-cover-blur" aria-hidden="true" style="background-image:url('${thumbnailUrl}')"></div>
+                    <img class="album-cover-img" src="${thumbnailUrl}" alt="${escapeHtml(album.title)}" loading="lazy" decoding="async">
+                </div>
+                <div class="album-info">
+                    <span class="space-badge ${badgeLabel}">${badgeLabel}</span>
+                    <div class="album-title">${escapeHtml(album.title)}</div>
+                    ${stats ? `<div class="album-stats">${stats}</div>` : ''}
+                    ${album.description ? `<div class="album-description">${escapeHtml(album.description)}</div>` : ''}
+                </div>
+            `;
+
+            // Phase A: Cover-Vorschau via Lupe (Hover) / Long-Press (Touch).
+            // Klick auf Lupe stoppt Bubbling -> card.onclick navigiert nicht.
+            // Long-Press unterdrueckt den synth. click ueber Window-Capture.
+            const coverEl = card.querySelector('.album-cover');
+            if (coverEl) {
+                // Gespeicherten Crop ggf. anwenden (CSS-Variablen)
+                if (album.thumbnail_crop) _applyCropToCover(coverEl, album.thumbnail_crop);
+
+                // Lupe = Crop-Editor-Trigger (Hover sichtbar auf Desktop, dauerhaft sichtbar auf Touch)
+                const lupe = document.createElement('button');
+                lupe.type = 'button';
+                lupe.className = 'alb-crop-lupe';
+                lupe.title = 'Cover-Ausschnitt waehlen';
+                lupe.setAttribute('aria-label', 'Cover-Ausschnitt waehlen');
+                lupe.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
+                lupe.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    _openAlbumCropEditor(album, card);
+                });
+                coverEl.appendChild(lupe);
+            }
+
+            // Phase B: Kebab-Menue (Umbenennen, Deckblatt, Loeschen, Teilen-Hinweis).
+            // Nur wenn aktueller User dieses Album bearbeiten darf.
+            if (coverEl && _canEditAlbum(album)) {
+                const kebab = document.createElement('button');
+                kebab.type = 'button';
+                kebab.className = 'alb-kebab';
+                kebab.title = 'Album-Aktionen';
+                kebab.setAttribute('aria-label', 'Album-Aktionen');
+                kebab.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>';
+                kebab.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    // Toggle: zweiter Klick auf denselben Kebab schliesst
+                    if (_openPopover && _openPopover._owner === kebab) {
+                        _closeAlbumPopover();
+                    } else {
+                        _openAlbumActionsPopover(card, album, kebab);
+                    }
+                });
+                coverEl.appendChild(kebab);
+            }
+
+            return card;
+        }
+
+        // ── Cover-Crop: Render & Helpers ──────────────────────────────
+        function _applyCropToCover(coverEl, crop) {
+            if (!coverEl || !crop) return;
+            coverEl.classList.add('has-crop');
+            coverEl.style.setProperty('--cx', crop.x);
+            coverEl.style.setProperty('--cy', crop.y);
+            coverEl.style.setProperty('--cw', crop.w);
+            coverEl.style.setProperty('--ch', crop.h);
+        }
+        function _clearCropFromCover(coverEl) {
+            if (!coverEl) return;
+            coverEl.classList.remove('has-crop');
+            ['--cx','--cy','--cw','--ch'].forEach(k => coverEl.style.removeProperty(k));
+        }
+
+        // ── Crop-Editor (Modal) ───────────────────────────────────────
+        async function _openAlbumCropEditor(album, card) {
+            if (!album.thumbnail) {
+                alert('Kein Cover-Foto gewaehlt — bitte erst „Deckblatt aendern".');
+                return;
+            }
+            const baseUrl = `${API_BASE}/api/thumbnail/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/${encodeURIComponent(album.thumbnail)}`;
+
+            const ov = document.createElement('div');
+            ov.className = 'alb-cropedit-overlay';
+            ov.innerHTML = `
+                <div class="alb-cropedit-box" role="dialog" aria-modal="true">
+                    <div class="alb-cropedit-header">
+                        <h3>Cover-Ausschnitt — „${escapeHtml(album.title || album.name)}"</h3>
+                        <button type="button" aria-label="Schliessen">&times;</button>
+                    </div>
+                    <div class="alb-cropedit-body">
+                        <div class="alb-cropedit-stage" id="alb-cropedit-stage">
+                            <img class="alb-cropedit-img" id="alb-cropedit-img" alt="" decoding="async">
+                            <div class="alb-cropedit-frame" id="alb-cropedit-frame" style="display:none">
+                                <div class="alb-cropedit-handle tl" data-corner="tl"></div>
+                                <div class="alb-cropedit-handle tr" data-corner="tr"></div>
+                                <div class="alb-cropedit-handle bl" data-corner="bl"></div>
+                                <div class="alb-cropedit-handle br" data-corner="br"></div>
+                            </div>
+                        </div>
+                        <div class="alb-cropedit-preview">
+                            <span>So sieht die Kachel aus:</span>
+                            <div class="alb-cropedit-preview-box" id="alb-cropedit-preview">
+                                <img id="alb-cropedit-prev-img" alt="">
+                            </div>
+                        </div>
+                        <div class="alb-cropedit-status" id="alb-cropedit-status">Lade Foto …</div>
+                    </div>
+                    <div class="alb-cropedit-actions">
+                        <button class="alb-cropedit-cancel" type="button">Abbrechen</button>
+                        <button class="alb-cropedit-save"   type="button" disabled>Speichern</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const stage   = ov.querySelector('#alb-cropedit-stage');
+            const img     = ov.querySelector('#alb-cropedit-img');
+            const frame   = ov.querySelector('#alb-cropedit-frame');
+            const prevBox = ov.querySelector('#alb-cropedit-preview');
+            const prevImg = ov.querySelector('#alb-cropedit-prev-img');
+            const status  = ov.querySelector('#alb-cropedit-status');
+            const btnSave = ov.querySelector('.alb-cropedit-save');
+            const btnCnc  = ov.querySelector('.alb-cropedit-cancel');
+            const btnX    = ov.querySelector('.alb-cropedit-header button');
+
+            prevImg.src = `${baseUrl}?size=m`;
+            img.src     = `${baseUrl}?size=full`;
+
+            let dispW = 0, dispH = 0;
+            let crop  = { x: 0, y: 0, side: 0 };
+            let dragging = null;
+
+            const close = () => {
+                ov.remove();
+                document.removeEventListener('keydown', onKey);
+                window.removeEventListener('resize', onResize);
+            };
+            const onKey = (e) => {
+                if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+                else if (e.key === 'Enter' && !btnSave.disabled) { e.preventDefault(); save(); }
+            };
+            const onResize = () => {
+                if (!img.complete || !img.naturalWidth) return;
+                // Display-Dimensions koennen sich beim Resize aendern. Aktuelle
+                // Crop in normalisiert merken, neu in Display-Pixel umrechnen.
+                const norm = _toNormalized(crop);
+                _measureDisplay();
+                _setCrop({
+                    x: norm.x * dispW,
+                    y: norm.y * dispH,
+                    side: Math.min(norm.w * dispW, norm.h * dispH),
+                });
+            };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnX.addEventListener('click', close);
+            btnCnc.addEventListener('click', close);
+            btnSave.addEventListener('click', save);
+            document.addEventListener('keydown', onKey);
+            window.addEventListener('resize', onResize);
+
+            img.addEventListener('error', () => {
+                status.textContent = 'Foto konnte nicht geladen werden.';
+            });
+            img.addEventListener('load', () => {
+                _measureDisplay();
+                let initial;
+                if (album.thumbnail_crop) {
+                    const c = album.thumbnail_crop;
+                    initial = {
+                        x: c.x * dispW,
+                        y: c.y * dispH,
+                        side: Math.min(c.w * dispW, c.h * dispH),
+                    };
+                } else {
+                    const side = Math.min(dispW, dispH) * 0.85;
+                    initial = { x: (dispW - side) / 2, y: (dispH - side) / 2, side };
+                }
+                _setCrop(initial);
+                frame.style.display = '';
+                btnSave.disabled = false;
+                status.textContent = 'Verschiebe den Rahmen oder ziehe an den Ecken.';
+            });
+
+            function _measureDisplay() {
+                dispW = img.clientWidth;
+                dispH = img.clientHeight;
+                stage.style.width  = dispW + 'px';
+                stage.style.height = dispH + 'px';
+            }
+
+            function _toNormalized(c) {
+                if (!dispW || !dispH) return { x: 0, y: 0, w: 1, h: 1 };
+                return {
+                    x: c.x / dispW,
+                    y: c.y / dispH,
+                    w: c.side / dispW,
+                    h: c.side / dispH,
+                };
+            }
+
+            function _setCrop(c) {
+                const minSide = Math.max(20, Math.min(dispW, dispH) * 0.05);
+                c.side = Math.max(minSide, Math.min(c.side, Math.min(dispW, dispH)));
+                c.x = Math.max(0, Math.min(c.x, dispW - c.side));
+                c.y = Math.max(0, Math.min(c.y, dispH - c.side));
+                crop = c;
+                frame.style.left   = c.x   + 'px';
+                frame.style.top    = c.y   + 'px';
+                frame.style.width  = c.side + 'px';
+                frame.style.height = c.side + 'px';
+                _updatePreview();
+            }
+            function _updatePreview() {
+                const n = _toNormalized(crop);
+                prevBox.style.setProperty('--cx', n.x);
+                prevBox.style.setProperty('--cy', n.y);
+                prevBox.style.setProperty('--cw', n.w);
+                prevBox.style.setProperty('--ch', n.h);
+            }
+
+            // ── Drag / Resize via Pointer Events ──
+            frame.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try { frame.setPointerCapture(e.pointerId); } catch (_) {}
+                const handle = e.target.closest('.alb-cropedit-handle');
+                if (handle) {
+                    dragging = { type: 'resize', corner: handle.dataset.corner, sx: e.clientX, sy: e.clientY, start: { ...crop } };
+                } else {
+                    dragging = { type: 'move', sx: e.clientX, sy: e.clientY, start: { ...crop } };
+                }
+            });
+            frame.addEventListener('pointermove', (e) => {
+                if (!dragging) return;
+                e.preventDefault();
+                const dx = e.clientX - dragging.sx;
+                const dy = e.clientY - dragging.sy;
+                if (dragging.type === 'move') {
+                    _setCrop({
+                        x   : dragging.start.x + dx,
+                        y   : dragging.start.y + dy,
+                        side: dragging.start.side,
+                    });
+                } else {
+                    _resizeFromCorner(dragging.start, dragging.corner, dx, dy);
+                }
+            });
+            const endDrag = () => { dragging = null; };
+            frame.addEventListener('pointerup',     endDrag);
+            frame.addEventListener('pointercancel', endDrag);
+
+            function _resizeFromCorner(start, corner, dx, dy) {
+                // Anker = der gegenueberliegende Eckpunkt; bleibt fix.
+                const ax = (corner === 'tl' || corner === 'bl') ? start.x + start.side : start.x;
+                const ay = (corner === 'tl' || corner === 'tr') ? start.y + start.side : start.y;
+                let nx, ny;
+                if (corner === 'tl') { nx = start.x + dx; ny = start.y + dy; }
+                if (corner === 'tr') { nx = start.x + start.side + dx; ny = start.y + dy; }
+                if (corner === 'bl') { nx = start.x + dx; ny = start.y + start.side + dy; }
+                if (corner === 'br') { nx = start.x + start.side + dx; ny = start.y + start.side + dy; }
+                const newSide = Math.max(Math.abs(nx - ax), Math.abs(ny - ay));
+                const newX = (corner === 'tl' || corner === 'bl') ? ax - newSide : ax;
+                const newY = (corner === 'tl' || corner === 'tr') ? ay - newSide : ay;
+                _setCrop({ x: newX, y: newY, side: newSide });
+            }
+
+            async function save() {
+                const cropData = _toNormalized(crop);
+                btnSave.disabled = true; btnCnc.disabled = true;
+                status.textContent = 'Speichere …';
+                try {
+                    const data = await _fetchAlbumForEdit(album);
+                    data.meta = data.meta || {};
+                    data.meta.thumbnail_crop = cropData;
+                    await _saveAlbum(album, data);
+                    album.thumbnail_crop = cropData;
+                    const cv = card.querySelector('.album-cover');
+                    _applyCropToCover(cv, cropData);
+                    if (typeof window.mpdToast === 'function') {
+                        window.mpdToast('Cover-Ausschnitt gespeichert', { duration: 2200 });
+                    }
+                    close();
+                } catch (err) {
+                    status.textContent = `Fehler: ${err.message || err}`;
+                    btnSave.disabled = false; btnCnc.disabled = false;
+                }
+            }
+        }
+
+        // ── Album-Aktionen: Popover + Aktionen ───────────────────────────
+        let _openPopover = null;
+
+        function _closeAlbumPopover() {
+            if (_openPopover) { _openPopover.remove(); _openPopover = null; }
+            document.removeEventListener('click',   _onPopoverOutside, true);
+            document.removeEventListener('keydown', _onPopoverEsc);
+        }
+        function _onPopoverOutside(e) {
+            if (!_openPopover) return;
+            if (_openPopover.contains(e.target)) return;
+            // Klick auf den Owner-Kebab nicht schliessen — der toggelt selbst
+            if (_openPopover._owner && _openPopover._owner.contains(e.target)) return;
+            _closeAlbumPopover();
+        }
+        function _onPopoverEsc(e) {
+            if (e.key === 'Escape') { _closeAlbumPopover(); }
+        }
+
+        function _openAlbumActionsPopover(card, album, anchorEl) {
+            _closeAlbumPopover();
+            const pop = document.createElement('div');
+            pop.className = 'alb-popover';
+            pop.setAttribute('role', 'menu');
+
+            const mkItem = (icon, label, onClick, opts = {}) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.setAttribute('role', 'menuitem');
+                if (opts.destructive) b.classList.add('alb-pop-destructive');
+                if (opts.disabled) b.disabled = true;
+                if (opts.title) b.title = opts.title;
+                const ic = document.createElement('span');
+                ic.className = 'alb-pop-icon';
+                // icon may be SVG markup (<svg…/>) or plain text/emoji — innerHTML
+                // works for both since emojis are valid as text content.
+                ic.innerHTML = icon;
+                const tx = document.createElement('span');
+                tx.textContent = label;
+                b.appendChild(ic);
+                b.appendChild(tx);
+                if (opts.hint) {
+                    const h = document.createElement('span');
+                    h.className = 'alb-pop-hint';
+                    h.textContent = opts.hint;
+                    b.appendChild(h);
+                }
+                if (!opts.disabled && onClick) {
+                    b.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        _closeAlbumPopover();
+                        onClick();
+                    });
+                }
+                return b;
+            };
+            const divider = () => {
+                const d = document.createElement('div');
+                d.className = 'alb-pop-divider';
+                return d;
+            };
+
+            const _kt = (k, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k) : fb) || fb;
+            // SVG icons matching the rest of the album-header / lightbox vocab
+            // (Lucide outline, currentColor, stroke 2). 18×18 viewBox.
+            const _ICO = {
+                pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>',
+                image:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
+                link:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+                trash:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+            };
+            pop.appendChild(mkItem(_ICO.pencil, _kt('album_kebab.rename', 'Umbenennen…'),     () => _openAlbumRenameModal(album, card)));
+            pop.appendChild(mkItem(_ICO.image,  _kt('album_kebab.cover',  'Deckblatt ändern…'), () => _openAlbumCoverPicker(album, card)));
+            if (appSettings.share_enabled) {
+                pop.appendChild(mkItem(_ICO.link, _kt('album_kebab.share', 'Teilen…'), () => _openAlbumShareModal(album, card)));
+            } else {
+                pop.appendChild(mkItem(_ICO.link, _kt('album_kebab.share', 'Teilen…'), null, {
+                    disabled: true,
+                    hint    : _kt('album_kebab.share_disabled_hint', 'deaktiviert'),
+                    title   : _kt('album_kebab.share_disabled_title', 'Teilen ist global deaktiviert (Einstellungen → Globale Einstellungen).'),
+                }));
+            }
+            pop.appendChild(divider());
+            pop.appendChild(mkItem(_ICO.trash, _kt('album_kebab.delete', 'Album löschen…'),  () => _confirmDeleteAlbum(album), { destructive: true }));
+
+            // Position: unter dem Kebab, rechtsbuendig
+            pop._owner = anchorEl;
+            document.body.appendChild(pop);
+            const ar = anchorEl.getBoundingClientRect();
+            const pr = pop.getBoundingClientRect();
+            let left = Math.min(window.innerWidth - pr.width - 8, ar.right - pr.width);
+            left = Math.max(8, left);
+            let top = ar.bottom + 6;
+            // Wenn unten kein Platz, nach oben kippen
+            if (top + pr.height > window.innerHeight - 8) top = Math.max(8, ar.top - pr.height - 6);
+            pop.style.left = left + 'px';
+            pop.style.top  = top  + 'px';
+
+            _openPopover = pop;
+            // Click-outside / ESC schliesst
+            setTimeout(() => {
+                document.addEventListener('click',   _onPopoverOutside, true);
+                document.addEventListener('keydown', _onPopoverEsc);
+            }, 0);
+        }
+
+        // ── Umbenennen ───────────────────────────────────────────────────
+        function _openAlbumRenameModal(album, card) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-rename-overlay';
+            ov.innerHTML = `
+                <div class="alb-rename-box">
+                    <h3>${_t('album_rename.title', null, 'Album umbenennen')}</h3>
+                    <input type="text" id="alb-rename-input" maxlength="200" value="${escapeHtml(album.title || album.name)}">
+                    <div class="alb-rename-status" id="alb-rename-status"></div>
+                    <div class="alb-rename-actions">
+                        <button class="alb-rename-cancel" type="button">${_t('album_rename.btn_cancel', null, 'Abbrechen')}</button>
+                        <button class="alb-rename-ok"     type="button">${_t('album_rename.btn_save', null, 'Speichern')}</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+            const box    = ov.querySelector('.alb-rename-box');
+            const input  = ov.querySelector('#alb-rename-input');
+            const status = ov.querySelector('#alb-rename-status');
+            const btnOk  = ov.querySelector('.alb-rename-ok');
+            const btnCnc = ov.querySelector('.alb-rename-cancel');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => {
+                if (e.key === 'Escape') { e.preventDefault(); close(); }
+                if (e.key === 'Enter')  { e.preventDefault(); save(); }
+            };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnCnc.addEventListener('click', close);
+            btnOk.addEventListener('click', save);
+            document.addEventListener('keydown', onKey);
+
+            setTimeout(() => { input.focus(); input.select(); }, 30);
+
+            async function save() {
+                const newTitle = input.value.trim();
+                if (!newTitle) { status.textContent = _t('album_rename.err_empty', null, 'Titel darf nicht leer sein.'); return; }
+                if (newTitle === (album.title || '')) { close(); return; }
+                btnOk.disabled = true; btnCnc.disabled = true;
+                status.textContent = _t('album_rename.status_saving', null, 'Speichere …');
+                try {
+                    const data = await _fetchAlbumForEdit(album);
+                    data.meta = data.meta || {};
+                    data.meta.title = newTitle;
+                    await _saveAlbum(album, data);
+                    album.title = newTitle;
+                    const t = card.querySelector('.album-title');
+                    if (t) t.textContent = newTitle;
+                    if (typeof window.mpdToast === 'function') window.mpdToast(_t('album_rename.toast_renamed', { title: newTitle }, `Umbenannt zu „${newTitle}"`), { duration: 2500 });
+                    close();
+                } catch (err) {
+                    status.textContent = _t('album_rename.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                    btnOk.disabled = false; btnCnc.disabled = false;
+                }
+            }
+        }
+
+        // ── Deckblatt ändern ─────────────────────────────────────────────
+        async function _openAlbumCoverPicker(album, card) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-coverpick-overlay';
+            ov.innerHTML = `
+                <div class="alb-coverpick-box">
+                    <div class="alb-coverpick-header">
+                        <h3>${_t('cover_picker.title', { album: escapeHtml(album.title || album.name) }, `Deckblatt für „${escapeHtml(album.title || album.name)}" wählen`)}</h3>
+                        <button type="button" aria-label="${_t('cover_picker.close_aria', null, 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-coverpick-body" id="alb-coverpick-grid">
+                        <div style="grid-column:1/-1;text-align:center;color:var(--muted,#888);padding:2rem">${_t('cover_picker.loading', null, 'Lade Fotos …')}</div>
+                    </div>
+                    <div class="alb-coverpick-status" id="alb-coverpick-status"></div>
+                </div>`;
+            document.body.appendChild(ov);
+            const box  = ov.querySelector('.alb-coverpick-box');
+            const grid = ov.querySelector('#alb-coverpick-grid');
+            const stat = ov.querySelector('#alb-coverpick-status');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            ov.querySelector('.alb-coverpick-header button').addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+
+            let albumData;
+            try {
+                albumData = await _fetchAlbumForEdit(album);
+            } catch (err) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#e06868;padding:2rem">${escapeHtml(_t('cover_picker.error', { msg: (err.message || String(err)) }, `Fehler: ${err.message || err}`))}</div>`;
+                return;
+            }
+            const photos = (albumData.elements || []).filter(e => e.type === 'photo' && e.file);
+            if (photos.length === 0) {
+                grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted,#888);padding:2rem">${_t('cover_picker.empty', null, 'Keine Fotos im Album.')}</div>`;
+                return;
+            }
+            grid.innerHTML = '';
+            const currentThumb = (albumData.meta && albumData.meta.thumbnail) || album.thumbnail;
+            photos.forEach(photo => {
+                const tile = document.createElement('div');
+                tile.className = 'alb-coverpick-tile' + (photo.file === currentThumb ? ' current' : '');
+                const thumbUrl = photo.thumbnails?.sm
+                    ? `${API_BASE}${photo.thumbnails.sm}`
+                    : `${API_BASE}/api/thumbnail/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/${encodeURIComponent(photo.file)}?size=sm`;
+                tile.innerHTML = `<img src="${thumbUrl}" loading="lazy" decoding="async" alt="">`;
+                tile.addEventListener('click', async () => {
+                    if (photo.file === currentThumb) { close(); return; }
+                    grid.querySelectorAll('.alb-coverpick-tile').forEach(t => t.classList.remove('current'));
+                    tile.classList.add('current');
+                    stat.textContent = _t('cover_picker.status_saving', null, 'Speichere …');
+
+                    let newThumbName = photo.file;
+                    try {
+                        // PDX v1.4: bei verwiesenem Foto Spec-konforme stille Kopie als Cover
+                        if (photo.source_album) {
+                            const r = await fetch(
+                                `${API_BASE}/api/album/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/cover-from-source`,
+                                {
+                                    method : 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body   : JSON.stringify({ source_album: photo.source_album, file: photo.file }),
+                                }
+                            );
+                            const d = await r.json();
+                            if (!r.ok) throw new Error(d.detail || r.statusText);
+                            newThumbName = d.thumbnail;
+                        }
+                        albumData.meta = albumData.meta || {};
+                        albumData.meta.thumbnail = newThumbName;
+                        // Variante ii: alter Crop ist fotospezifisch — beim Foto-Wechsel verwerfen.
+                        if (albumData.meta.thumbnail_crop) delete albumData.meta.thumbnail_crop;
+                        await _saveAlbum(album, albumData);
+                        album.thumbnail = newThumbName;
+                        album.thumbnail_crop = null;
+                        // Card-Bild im Grid auffrischen + alten Crop-Render zuruecksetzen
+                        const newUrl = `${API_BASE}/api/thumbnail/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/${encodeURIComponent(newThumbName)}?size=sm`;
+                        const cv   = card.querySelector('.album-cover');
+                        const im   = card.querySelector('.album-cover-img');
+                        const blur = card.querySelector('.album-cover-blur');
+                        _clearCropFromCover(cv);
+                        if (im)   im.src = newUrl + '&_t=' + Date.now();   // cache-bust
+                        if (blur) blur.style.backgroundImage = `url('${newUrl}&_t=${Date.now()}')`;
+                        if (typeof window.mpdToast === 'function') window.mpdToast(_t('cover_picker.toast_changed', null, 'Deckblatt geändert'), { duration: 2200 });
+                        close();
+                    } catch (err) {
+                        stat.textContent = _t('cover_picker.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                    }
+                });
+                grid.appendChild(tile);
+            });
+        }
+
+        // _openAlbumShareModal / _openSendMailModal / _openContactsModal
+        // wurden nach /js/album-share.js ausgelagert (geteilt mit album.html).
+
+        // ── Einstellungen (Per-User + Admin-Global) ──────────────────────
+        async function _openSettingsModal() {
+            // Frisch holen, damit Werte live sind
+            await loadAppSettings();
+
+            // Zwei Aufrufformen in diesem Dialog: _t(key, fallback) und
+            // _t(key, vars, fallback). Bis 24.09.2026 kannte der Helfer nur
+            // die erste — die Lizenzzeile zeigte "{customer}" statt des Namens.
+            const _t = (k, a, b) => {
+                const vars = (a && typeof a === 'object') ? a : undefined;
+                const fb = typeof a === 'string' ? a : b;
+                return (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            };
+            const isAdmin = currentRole === 'admin';
+            const ov = document.createElement('div');
+            ov.className = 'alb-settings-overlay';
+            ov.innerHTML = `
+                <div class="alb-settings-box" role="dialog" aria-modal="true">
+                    <div class="alb-settings-header">
+                        <h3>${_t('settings_modal.title', 'Einstellungen')}</h3>
+                        <button type="button" class="alb-settings-close" aria-label="${_t('settings_modal.close_aria', 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-settings-body">
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_personal', 'Für dich')}</div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.contacts_name', '📇 Adressbuch')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.contacts_hint', 'Gespeicherte Empfänger aus Share-Mails pflegen.')}</div>
+                                </div>
+                                <button class="alb-settings-row-btn" type="button" id="settings-open-contacts">${_t('settings_modal.contacts_open', 'Öffnen')}</button>
+                            </div>
+                        </div>
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_owndata', 'Meine Daten')}</div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.trails_export_name', '📍 Standortverlauf mitnehmen')}</div>
+                                    <div class="alb-settings-row-hint" id="trails-export-hint">${_t('settings_modal.trails_export_hint', 'Der vollständige eigene Verlauf als ZIP — je Monat eine Datei mit einer Zeile je aufgezeichnetem Punkt.')}</div>
+                                </div>
+                                <button class="alb-settings-row-btn" type="button" id="trails-export-btn">${_t('settings_modal.trails_export_btn', 'Herunterladen')}</button>
+                            </div>
+                        </div>
+                        ${isAdmin ? `
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_global', 'Globale Einstellungen')} <span class="alb-settings-section-badge">${_t('settings_modal.admin_badge', 'Admin')}</span></div>
+                            <label class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.share_enabled_name', 'Teilen erlauben')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.share_enabled_hint', 'Wenn aus: keine neuen Share-Links, bestehende sind pausiert.')}</div>
+                                </div>
+                                <input type="checkbox" class="alb-settings-switch" data-key="share_enabled"${appSettings.share_enabled ? ' checked' : ''}>
+                            </label>
+                            <label class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.demo_enabled_name', 'Demo-Zugang erlauben')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.demo_enabled_hint', 'Wenn aus: Login als mpd-demo wird abgewiesen.')}</div>
+                                </div>
+                                <input type="checkbox" class="alb-settings-switch" data-key="demo_enabled"${appSettings.demo_enabled ? ' checked' : ''}>
+                            </label>
+                            <label class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.memories_enabled_name', 'Memories-Push aktiv')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.memories_enabled_hint', 'Wenn aus: keine tägliche Benachrichtigung in der App.')}</div>
+                                </div>
+                                <input type="checkbox" class="alb-settings-switch" data-key="memories_push_enabled"${appSettings.memories_push_enabled ? ' checked' : ''}>
+                            </label>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.handbook_name', '🧭 Developer handbook')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.handbook_hint', 'Architecture, modules, data model, operations — DE/EN.')}</div>
+                                </div>
+                                <a class="alb-settings-row-btn" href="/admin/handbook" target="_blank" rel="noopener">${_t('settings_modal.handbook_open', 'Open')}</a>
+                            </div>
+                        </div>
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_companion', 'Write Companion')} <span class="alb-settings-section-badge">${_t('settings_modal.admin_badge', 'Admin')}</span></div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.companion_provider_name', 'KI-Provider')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.companion_provider_hint', 'Dienst für die Formulierungshilfe im Edit Mode.')}</div>
+                                </div>
+                                <select class="alb-settings-companion-select" id="companion-provider-select">
+                                    <option value="anthropic"${appSettings.companion_provider === 'anthropic' ? ' selected' : ''}>Anthropic (Claude)</option>
+                                    <option value="groq"${appSettings.companion_provider === 'groq' ? ' selected' : ''}>Groq (Llama)</option>
+                                    <option value="mistral"${appSettings.companion_provider === 'mistral' ? ' selected' : ''}>Mistral</option>
+                                    <option value="gemini"${appSettings.companion_provider === 'gemini' ? ' selected' : ''}>Google Gemini Flash</option>
+                                </select>
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.companion_key_name', 'API-Key')}</div>
+                                    <div class="alb-settings-row-hint" id="companion-key-hint">${appSettings.companion_api_key_hint
+                                        ? (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.companion_key_hint_set', { hint: appSettings.companion_api_key_hint }) : `Gesetzt: ${appSettings.companion_api_key_hint}`)
+                                        : _t('settings_modal.companion_key_hint_empty', 'Noch kein Key hinterlegt.')}</div>
+                                </div>
+                                <input type="password" class="alb-settings-companion-input" id="companion-api-key-input"
+                                    placeholder="${_t('settings_modal.companion_key_placeholder', 'Key eingeben…')}"
+                                    autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row" style="justify-content:flex-end;">
+                                <button type="button" class="alb-settings-row-btn" id="companion-save-btn">${_t('settings_modal.companion_save', 'Speichern')}</button>
+                            </div>
+                        </div>
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_plus', 'MPD Plus')} <span class="alb-settings-section-badge">${_t('settings_modal.admin_badge', 'Admin')}</span></div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.plus_state_name', 'Lizenz')}</div>
+                                    <div class="alb-settings-row-hint" id="plus-state-hint"></div>
+                                </div>
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.plus_paste_name', 'Lizenz einspielen')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.plus_paste_hint', 'Den Inhalt der Lizenzdatei hier einfügen. Geprüft wird die Signatur; erst dann wird gespeichert.')}</div>
+                                </div>
+                                <textarea class="alb-settings-companion-input" id="plus-license-text" rows="4" spellcheck="false" placeholder='{"payload": {…}, "signature": "…"}'></textarea>
+                            </div>
+                            <div class="alb-settings-row" style="justify-content:flex-end;gap:.5rem;">
+                                <button type="button" class="alb-settings-row-btn" id="plus-remove-btn">${_t('settings_modal.plus_remove', 'Lizenz entfernen')}</button>
+                                <button type="button" class="alb-settings-row-btn" id="plus-install-btn">${_t('settings_modal.plus_install', 'Einspielen')}</button>
+                            </div>
+                            <div class="alb-settings-status" id="plus-status" role="status" aria-live="polite"></div>
+                        </div>
+                        <div class="alb-settings-section">
+                            <div class="alb-settings-section-title">${_t('settings_modal.section_smtp', 'Mailversand')} <span class="alb-settings-section-badge">${_t('settings_modal.admin_badge', 'Admin')}</span></div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_state_name', 'Status')}</div>
+                                    <div class="alb-settings-row-hint" id="smtp-state-hint">${
+                                        appSettings.smtp_configured
+                                            ? (appSettings.smtp_source === 'settings'
+                                                ? _t('settings_modal.smtp_state_settings', 'Eingerichtet über diese Seite.')
+                                                : _t('settings_modal.smtp_state_env', 'Eingerichtet über mpd.env. Trägst du hier etwas ein, gilt das stattdessen.'))
+                                            : _t('settings_modal.smtp_state_none', 'Nicht eingerichtet — Teilen per Mail und Einladungen sind aus.')}</div>
+                                </div>
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_host_name', 'Server')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.smtp_host_hint', 'z. B. smtp.mailbox.org — STARTTLS, üblich Port 587.')}</div>
+                                </div>
+                                <input type="text" class="alb-settings-companion-input" id="smtp-host-input"
+                                    value="${appSettings.smtp_host || ''}" placeholder="smtp.example.org" autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_port_name', 'Port')}</div>
+                                </div>
+                                <input type="number" class="alb-settings-companion-input" id="smtp-port-input"
+                                    value="${appSettings.smtp_port || ''}" placeholder="587" min="1" max="65535">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_user_name', 'Benutzername')}</div>
+                                </div>
+                                <input type="text" class="alb-settings-companion-input" id="smtp-user-input"
+                                    value="${appSettings.smtp_user || ''}" autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_pass_name', 'Passwort')}</div>
+                                    <div class="alb-settings-row-hint" id="smtp-pass-hint">${appSettings.smtp_pass_hint
+                                        ? (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.smtp_pass_hint_set', { hint: appSettings.smtp_pass_hint }) : `Gesetzt: ${appSettings.smtp_pass_hint}`)
+                                        : _t('settings_modal.smtp_pass_hint_empty', 'Leer lassen heißt: unverändert.')}</div>
+                                </div>
+                                <input type="password" class="alb-settings-companion-input" id="smtp-pass-input"
+                                    placeholder="${_t('settings_modal.smtp_pass_placeholder', 'Nur zum Ändern ausfüllen…')}" autocomplete="new-password">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_from_name', 'Absenderadresse')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.smtp_from_hint', 'Steht als Absender in jeder Mail.')}</div>
+                                </div>
+                                <input type="email" class="alb-settings-companion-input" id="smtp-from-addr-input"
+                                    value="${appSettings.smtp_from_addr || ''}" autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_fromname_name', 'Absendername')}</div>
+                                </div>
+                                <input type="text" class="alb-settings-companion-input" id="smtp-from-name-input"
+                                    value="${appSettings.smtp_from_name || ''}" placeholder="My Photo Diary" autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row">
+                                <div class="alb-settings-row-label">
+                                    <div class="alb-settings-row-name">${_t('settings_modal.smtp_test_name', 'Verbindung prüfen')}</div>
+                                    <div class="alb-settings-row-hint">${_t('settings_modal.smtp_test_hint', 'Schickt eine Testmail. Erst speichern, dann prüfen.')}</div>
+                                </div>
+                                <input type="email" class="alb-settings-companion-input" id="smtp-test-addr-input"
+                                    value="${appSettings.smtp_from_addr || ''}" placeholder="empfaenger@example.org" autocomplete="off">
+                            </div>
+                            <div class="alb-settings-row" style="justify-content:flex-end;gap:.5rem;">
+                                <button type="button" class="alb-settings-row-btn" id="smtp-test-btn">${_t('settings_modal.smtp_test_btn', 'Testmail senden')}</button>
+                                <button type="button" class="alb-settings-row-btn" id="smtp-save-btn">${_t('settings_modal.smtp_save', 'Speichern')}</button>
+                            </div>
+                        </div>` : ''}
+                        <div class="alb-settings-status" id="alb-settings-status"></div>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const status   = ov.querySelector('#alb-settings-status');
+            const btnClose = ov.querySelector('.alb-settings-close');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnClose.addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+
+            // Adressbuch öffnen
+            ov.querySelector('#settings-open-contacts').addEventListener('click', () => {
+                _openContactsModal();
+            });
+
+            // Admin-Switches: auf Änderung direkt speichern
+            if (isAdmin) {
+                ov.querySelectorAll('.alb-settings-switch').forEach(cb => {
+                    cb.addEventListener('change', async () => {
+                        const key = cb.dataset.key;
+                        const val = cb.checked;
+                        const prev = appSettings[key];
+                        cb.disabled = true;
+                        status.textContent = _t('settings_modal.status_saving', 'Speichere…');
+                        try {
+                            const r = await fetch(`${API_BASE}/api/settings`, {
+                                method : 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body   : JSON.stringify({ [key]: val }),
+                            });
+                            const d = await r.json();
+                            if (!r.ok) throw new Error(d.detail || r.statusText);
+                            appSettings = { ...appSettings, ...d };
+                            status.textContent = '';
+                            if (typeof window.mpdToast === 'function') {
+                                window.mpdToast(val
+                                    ? _t('settings_modal.toast_enabled', 'Einstellung aktiviert')
+                                    : _t('settings_modal.toast_disabled', 'Einstellung deaktiviert'),
+                                    { duration: 1500 });
+                            }
+                            // Falls share_enabled kippt, Album-Liste neu zeichnen → Kebab-Tooltip
+                            if (key === 'share_enabled') renderAlbums();
+                        } catch (err) {
+                            cb.checked = prev;  // zurück
+                            const _msg = (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.error_prefix', { msg: (err.message || err) }) : `Fehler: ${err.message || err}`);
+                            status.textContent = _msg;
+                        } finally {
+                            cb.disabled = false;
+                        }
+                    });
+                });
+
+                // Companion-Speichern
+                const companionSaveBtn = ov.querySelector('#companion-save-btn');
+                if (companionSaveBtn) {
+                    companionSaveBtn.addEventListener('click', async () => {
+                        const providerSel = ov.querySelector('#companion-provider-select');
+                        const keyInput    = ov.querySelector('#companion-api-key-input');
+                        const newProvider = providerSel.value;
+                        const newKey      = keyInput.value.trim();
+                        const payload     = { companion_provider: newProvider };
+                        if (newKey) payload.companion_api_key = newKey;
+
+                        companionSaveBtn.disabled = true;
+                        status.textContent = _t('settings_modal.status_saving', 'Speichere…');
+                        try {
+                            const r = await fetch(`${API_BASE}/api/settings`, {
+                                method : 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body   : JSON.stringify(payload),
+                            });
+                            let d;
+                            try { d = await r.json(); } catch { throw new Error(`HTTP ${r.status}`); }
+                            if (!r.ok) throw new Error(d.detail || r.statusText);
+                            appSettings = { ...appSettings, ...d };
+                            keyInput.value = '';
+                            status.textContent = '';
+                            const hintEl = ov.querySelector('#companion-key-hint');
+                            if (hintEl) {
+                                const newHint = d.companion_api_key_hint;
+                                hintEl.textContent = newHint
+                                    ? (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.companion_key_hint_set', { hint: newHint }) : `Gesetzt: ${newHint}`)
+                                    : _t('settings_modal.companion_key_hint_empty', 'Noch kein Key hinterlegt.');
+                            }
+                            if (typeof window.mpdToast === 'function') {
+                                window.mpdToast(_t('settings_modal.companion_saved', 'Companion gespeichert'), { duration: 1800 });
+                            }
+                            if (window.Companion) { window.Companion.reset?.(); window.Companion.init?.(); }
+                        } catch (err) {
+                            const _msg = (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.error_prefix', { msg: (err.message || err) }) : `Fehler: ${err.message || err}`);
+                            status.textContent = _msg;
+                        } finally {
+                            companionSaveBtn.disabled = false;
+                        }
+                    });
+                }
+
+                // ── Mailversand (Admin) ─────────────────────────────────
+                // Einstellungen gewinnen, mpd.env bleibt der Rueckfall. Das
+                // Passwort geht nur maskiert heraus; ein leeres Feld wird
+                // deshalb NICHT mitgeschickt, sonst hiesse Speichern
+                // versehentlich Loeschen (das Backend faengt es zusaetzlich ab).
+                const smtpSaveBtn = ov.querySelector('#smtp-save-btn');
+                const smtpTestBtn = ov.querySelector('#smtp-test-btn');
+
+                // MPD Plus — Lizenzstand anzeigen, Text einspielen, entfernen.
+                const plusHint = ov.querySelector('#plus-state-hint');
+                const _renderPlus = (lic) => {
+                    if (!plusHint) return;
+                    lic = lic || {};
+                    let txt;
+                    // Karenz (24.09.2026): `valid` bleibt waehrend der Karenz true —
+                    // ohne den Zweig stuende hier "gueltig bis" mit einem Datum in der
+                    // Vergangenheit. Und wer in zwei Wochen ablaeuft, soll es hier sehen
+                    // und nicht erst am Stichtag vor einem Schloss stehen.
+                    const rest = (lic.grace_days || 0) + (lic.days_left || 0);
+                    if (lic.in_grace) {
+                        txt = _t('settings_modal.plus_state_grace', { date: lic.expires || '', days: rest },
+                                 `Abgelaufen am ${lic.expires || ''} — die Module laufen noch ${rest} Tage, dann sind sie gesperrt.`);
+                    } else if (lic.valid) {
+                        txt = _t('settings_modal.plus_state_valid', { customer: lic.customer || '—', modules: (lic.modules || []).join(', ') || '—' },
+                                 `Gültig für ${lic.customer || '—'} · Module: ${(lic.modules || []).join(', ') || '—'}`);
+                        if (lic.expires) {
+                            txt += ' · ' + (typeof lic.days_left === 'number' && lic.days_left <= 14
+                                ? _t('settings_modal.plus_expires_soon', { days: lic.days_left, date: lic.expires },
+                                     `läuft in ${lic.days_left} Tagen ab (${lic.expires})`)
+                                : _t('settings_modal.plus_expires', { date: lic.expires }, `gültig bis ${lic.expires}`));
+                        }
+                    } else if (lic.error === 'abgelaufen') {
+                        txt = _t('settings_modal.plus_state_expired', { date: lic.expires || '' }, `Abgelaufen am ${lic.expires || ''} — Plus ist aus, Basis läuft.`);
+                    } else if (lic.error && lic.error !== 'keine Lizenzdatei') {
+                        txt = _t('settings_modal.plus_state_broken', { msg: lic.error }, `Lizenzdatei unbrauchbar: ${lic.error}`);
+                    } else {
+                        txt = _t('settings_modal.plus_state_none', null, 'Keine Lizenz eingespielt.');
+                    }
+                    if (!lic.enforced) txt += ' ' + _t('settings_modal.plus_not_enforced', null, '(Auf dieser Installation ist die Lizenzprüfung aus — alle Module sind frei.)');
+                    plusHint.textContent = txt;
+                    const rm = ov.querySelector('#plus-remove-btn');
+                    if (rm) rm.style.display = (lic.valid || lic.in_grace || lic.error === 'abgelaufen' || (lic.error && lic.error !== 'keine Lizenzdatei')) ? '' : 'none';
+                };
+                _renderPlus(appSettings.license);
+                /* ── Standortverlauf mitnehmen ──
+                   Bewusst hier und nicht in der Werkzeugleiste der Trails-Seite:
+                   Das ist eine Handlung fuer einmal im Jahr, nicht fuer jeden Tag,
+                   und sie holt zwoelf Jahre Bewegungsgeschichte auf einmal. Neben
+                   dem taeglichen GPX-Knopf waere sie zu leicht zu treffen — auch
+                   fuer jemanden, der eine offene Sitzung vor sich hat. */
+                const trailsBtn  = ov.querySelector('#trails-export-btn');
+                const trailsHint = ov.querySelector('#trails-export-hint');
+                if (trailsBtn) trailsBtn.addEventListener('click', async () => {
+                    const _mb = b => b >= 1e9 ? (b / 1e9).toFixed(1).replace('.', ',') + ' GB'
+                                              : Math.round(b / 1e6) + ' MB';
+                    trailsBtn.disabled = true;
+                    try {
+                        const r = await fetch(`${API_BASE}/api/trails/archive`,
+                                              { credentials: 'same-origin' });
+                        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                        const info = await r.json();
+                        const dateien = info.files || [];
+                        if (!dateien.length) {
+                            trailsHint.textContent = _t('settings_modal.trails_export_empty', null,
+                                'Noch nichts im Archiv — die Monatsdateien entstehen nachts.');
+                            return;
+                        }
+                        const monate = dateien.filter(f => f.month).map(f => f.month).sort();
+                        const spanne = monate.length
+                            ? `${monate[0]} – ${monate[monate.length - 1]}` : '';
+                        const ok = await window.mpdConfirm({
+                            icon: '📍',
+                            title: _t('settings_modal.trails_export_name', '📍 Standortverlauf mitnehmen'),
+                            subtitle: `${dateien.length} Dateien, ${_mb(info.bytes || 0)}${spanne ? ' — ' + spanne : ''}`,
+                            body: _t('settings_modal.trails_export_body', null,
+                                'Du bekommst deinen vollständigen Verlauf als ZIP: je Monat eine Datei '
+                                + 'mit einer Zeile je aufgezeichnetem Punkt, dazu die erkannten '
+                                + 'Aufenthalte, Wege und Orte. Reiner Text, lesbar auch ohne '
+                                + 'My Photo Diary.'),
+                            hint: _t('settings_modal.trails_export_warn', null,
+                                'Die Datei enthält, wo du in den letzten Jahren warst. Leg sie nur '
+                                + 'dorthin, wo du sie haben willst.'),
+                            hintType: 'warn',
+                            confirmLabel: _t('settings_modal.trails_export_btn', 'Herunterladen'),
+                        });
+                        if (ok) window.location.href = `${API_BASE}/api/trails/archive.zip`;
+                    } catch (e) {
+                        trailsHint.textContent = _t('settings_modal.trails_export_error',
+                            { msg: String(e && e.message || e) },
+                            `Archiv nicht abrufbar: ${e && e.message || e}`);
+                    } finally {
+                        trailsBtn.disabled = false;
+                    }
+                });
+
+                // Rueckmeldung direkt unter den Knoepfen — die Statuszeile am Dialogende
+                // lag beim Klick ausser Sicht (24.09.2026: "nichts passiert").
+                const plusStatus = ov.querySelector('#plus-status') || status;
+                const plusInstall = ov.querySelector('#plus-install-btn');
+                if (plusInstall) plusInstall.addEventListener('click', async () => {
+                    const ta = ov.querySelector('#plus-license-text');
+                    const text = (ta?.value || '').trim();
+                    if (!text) { plusStatus.textContent = _t('settings_modal.plus_paste_empty', null, 'Bitte den Lizenztext einfügen.'); return; }
+                    plusInstall.disabled = true;
+                    plusStatus.textContent = _t('settings_modal.status_saving', 'Speichere…');
+                    try {
+                        const r = await fetch(`${API_BASE}/api/settings/license`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text }), credentials: 'same-origin',
+                        });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) throw new Error(d.detail || r.status);
+                        appSettings.license = d; _renderPlus(d);
+                        if (ta) ta.value = '';
+                        plusStatus.textContent = _t('settings_modal.plus_installed', 'Lizenz eingespielt') + ' ✓';
+                        if (window.mpdToast) window.mpdToast(_t('settings_modal.plus_installed', null, 'Lizenz eingespielt'), { duration: 2200 });
+                    } catch (err) {
+                        plusStatus.textContent = String(err.message || err);
+                    } finally { plusInstall.disabled = false; }
+                });
+                const plusRemove = ov.querySelector('#plus-remove-btn');
+                if (plusRemove) plusRemove.addEventListener('click', async () => {
+                    const ok = await window.mpdConfirm({
+                        icon: '🔒', title: _t('settings_modal.plus_remove_title', null, 'Lizenz entfernen?'),
+                        body: _t('settings_modal.plus_remove_body', null, 'Plus fällt damit weg, Basis läuft weiter. Die Datei kann jederzeit wieder eingespielt werden.'),
+                        confirmLabel: _t('settings_modal.plus_remove', null, 'Lizenz entfernen'), destructive: true,
+                    });
+                    if (!ok) return;
+                    try {
+                        const r = await fetch(`${API_BASE}/api/settings/license`, { method: 'DELETE', credentials: 'same-origin' });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) throw new Error(d.detail || r.status);
+                        appSettings.license = d; _renderPlus(d);
+                    } catch (err) { plusStatus.textContent = String(err.message || err); }
+                });
+
+                if (smtpSaveBtn) {
+                    smtpSaveBtn.addEventListener('click', async () => {
+                        const val = id => (ov.querySelector(id)?.value || '').trim();
+                        const pass = val('#smtp-pass-input');
+                        const payload = {
+                            smtp_host     : val('#smtp-host-input'),
+                            smtp_port     : parseInt(val('#smtp-port-input'), 10) || 0,
+                            smtp_user     : val('#smtp-user-input'),
+                            smtp_from_addr: val('#smtp-from-addr-input'),
+                            smtp_from_name: val('#smtp-from-name-input'),
+                        };
+                        if (pass) payload.smtp_pass = pass;
+
+                        smtpSaveBtn.disabled = true;
+                        status.textContent = _t('settings_modal.status_saving', 'Speichere…');
+                        try {
+                            const r = await fetch(`${API_BASE}/api/settings`, {
+                                method : 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body   : JSON.stringify(payload),
+                                credentials: 'same-origin',
+                            });
+                            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status);
+                            const d = await r.json();
+                            appSettings = { ...appSettings, ...d };
+                            status.textContent = '';
+
+                            const passInput = ov.querySelector('#smtp-pass-input');
+                            if (passInput) passInput.value = '';
+                            const passHint = ov.querySelector('#smtp-pass-hint');
+                            if (passHint) {
+                                passHint.textContent = d.smtp_pass_hint
+                                    ? (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.smtp_pass_hint_set', { hint: d.smtp_pass_hint }) : `Gesetzt: ${d.smtp_pass_hint}`)
+                                    : _t('settings_modal.smtp_pass_hint_empty', 'Leer lassen heißt: unverändert.');
+                            }
+                            const stateHint = ov.querySelector('#smtp-state-hint');
+                            if (stateHint) {
+                                stateHint.textContent = d.smtp_configured
+                                    ? (d.smtp_source === 'settings'
+                                        ? _t('settings_modal.smtp_state_settings', 'Eingerichtet über diese Seite.')
+                                        : _t('settings_modal.smtp_state_env', 'Eingerichtet über mpd.env. Trägst du hier etwas ein, gilt das stattdessen.'))
+                                    : _t('settings_modal.smtp_state_none', 'Nicht eingerichtet — Teilen per Mail und Einladungen sind aus.');
+                            }
+                            if (typeof window.mpdToast === 'function') {
+                                window.mpdToast(_t('settings_modal.smtp_saved', 'Mailversand gespeichert'), { duration: 1800 });
+                            }
+                        } catch (err) {
+                            status.textContent = (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.error_prefix', { msg: (err.message || err) }) : `Fehler: ${err.message || err}`);
+                        } finally {
+                            smtpSaveBtn.disabled = false;
+                        }
+                    });
+                }
+
+                if (smtpTestBtn) {
+                    smtpTestBtn.addEventListener('click', async () => {
+                        const to = (ov.querySelector('#smtp-test-addr-input')?.value || '').trim();
+                        if (!to) {
+                            status.textContent = _t('settings_modal.smtp_test_no_addr', 'Bitte eine Empfängeradresse eintragen.');
+                            return;
+                        }
+                        smtpTestBtn.disabled = true;
+                        status.textContent = _t('settings_modal.smtp_test_sending', 'Sende Testmail…');
+                        try {
+                            const r = await fetch(`${API_BASE}/api/mail-test`, {
+                                method : 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body   : JSON.stringify({ to_email: to }),
+                                credentials: 'same-origin',
+                            });
+                            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.status);
+                            status.textContent = '';
+                            if (typeof window.mpdToast === 'function') {
+                                window.mpdToast(_t('settings_modal.smtp_test_ok', 'Testmail unterwegs'), { duration: 2200 });
+                            }
+                        } catch (err) {
+                            status.textContent = (window.MPD_I18N ? window.MPD_I18N.t('settings_modal.error_prefix', { msg: (err.message || err) }) : `Fehler: ${err.message || err}`);
+                        } finally {
+                            smtpTestBtn.disabled = false;
+                        }
+                    });
+                }
+            }
+        }
+
+        // ── Benutzer-Verwaltung (Admin, Phase A) ─────────────────────────
+        async function _openUserAdminModal() {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-settings-overlay';
+            ov.innerHTML = `
+                <div class="alb-settings-box" role="dialog" aria-modal="true">
+                    <div class="alb-settings-header">
+                        <h3>${_t('users_admin.title', null, 'Benutzer')}</h3>
+                        <button type="button" class="alb-settings-close" aria-label="${_t('users_admin.close_aria', null, 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-settings-body">
+                        <div class="alb-users-toolbar">
+                            <button type="button" class="alb-users-add" id="alb-users-add">${_t('users_admin.btn_add', null, '+ Neuer Benutzer')}</button>
+                        </div>
+                        <div class="alb-users-table" id="alb-users-table">
+                            <div class="alb-settings-status">${_t('users_admin.loading', null, 'Lade…')}</div>
+                        </div>
+                        <div class="alb-users-hint">
+                            ${_t('users_admin.hint', null, 'Der Vorname erscheint in geteilten Alben („Geteilt von Anna") und in Share-Mails. Änderung mit ✓ oder Enter bestätigen; leer lassen nutzt den Login-Namen. 🔑 setzt das Passwort zurück, 🗑 löscht den User (beides invalidiert dessen Sessions).')}
+                        </div>
+                        <div class="alb-settings-status" id="alb-users-status"></div>
+                        <div class="alb-users-footer">
+                            <button type="button" class="alb-users-done" id="alb-users-done">${_t('users_admin.btn_done', null, 'Schließen')}</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const btnClose = ov.querySelector('.alb-settings-close');
+            const btnDone  = ov.querySelector('#alb-users-done');
+            const tableEl  = ov.querySelector('#alb-users-table');
+            const statusEl = ov.querySelector('#alb-users-status');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => {
+                if (e.key !== 'Escape') return;
+                const active = document.activeElement;
+                // ESC in einem dirty Feld revertiert nur die Zeile (damit man nicht
+                // aus Versehen tippt und den Wert verliert). Zweites ESC schließt.
+                if (active && (active.classList?.contains('alb-users-row-display')
+                            || active.classList?.contains('alb-users-role-select'))) {
+                    const row = active.closest('.alb-users-row');
+                    if (row && row.classList.contains('is-dirty')) {
+                        revertRow(row);
+                        e.preventDefault();
+                        return;
+                    }
+                    active.blur();
+                    e.preventDefault();
+                    return;
+                }
+                e.preventDefault();
+                close();
+            };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnClose.addEventListener('click', close);
+            btnDone.addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+
+            function rowDirty(row) {
+                const inp = row.querySelector('.alb-users-row-display');
+                const sel = row.querySelector('.alb-users-role-select');
+                const nameDirty = inp.value.trim() !== (inp.dataset.original || '');
+                const roleDirty = sel && !sel.disabled
+                    ? sel.value !== (sel.dataset.original || '')
+                    : false;
+                return nameDirty || roleDirty;
+            }
+
+            function refreshRowDirty(row) {
+                const dirty = rowDirty(row);
+                row.classList.toggle('is-dirty', dirty);
+                const btn = row.querySelector('.alb-users-commit');
+                if (btn) btn.disabled = !dirty;
+            }
+
+            function revertRow(row) {
+                const inp = row.querySelector('.alb-users-row-display');
+                const sel = row.querySelector('.alb-users-role-select');
+                inp.value = inp.dataset.original || '';
+                if (sel) sel.value = sel.dataset.original || '';
+                row.classList.remove('is-dirty');
+                const btn = row.querySelector('.alb-users-commit');
+                if (btn) btn.disabled = true;
+            }
+
+            async function saveRow(row) {
+                if (!rowDirty(row)) return;
+                const inp = row.querySelector('.alb-users-row-display');
+                const sel = row.querySelector('.alb-users-role-select');
+                const btn = row.querySelector('.alb-users-commit');
+                const username = row.dataset.username;
+
+                const payload = {};
+                if (inp.value.trim() !== (inp.dataset.original || '')) {
+                    payload.display_name = inp.value.trim();
+                }
+                if (sel && !sel.disabled && sel.value !== (sel.dataset.original || '')) {
+                    payload.role = sel.value;
+                }
+                if (!Object.keys(payload).length) return;
+
+                inp.disabled = true;
+                if (sel) sel.disabled = true;
+                if (btn) btn.disabled = true;
+                statusEl.textContent = _t('users_admin.status_saving', null, 'Speichere…');
+                try {
+                    const r = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(username)}`, {
+                        method : 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body   : JSON.stringify(payload),
+                    });
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.detail || r.statusText);
+                    inp.dataset.original = d.display_name || '';
+                    inp.value = d.display_name || '';
+                    if (sel) {
+                        sel.dataset.original = d.role || '';
+                        sel.value = d.role || '';
+                    }
+                    row.classList.remove('is-dirty');
+                    row.classList.add('saved');
+                    statusEl.textContent = '';
+                    const bits = [];
+                    if ('display_name' in payload) {
+                        bits.push(payload.display_name
+                            ? _t('users_admin.toast_display_set', { name: payload.display_name }, `Vorname: ${payload.display_name}`)
+                            : _t('users_admin.toast_display_cleared', null, 'Vorname gelöscht'));
+                    }
+                    if ('role' in payload) bits.push(_t('users_admin.toast_role_set', { role: payload.role }, `Rolle: ${payload.role}`));
+                    if (typeof window.mpdToast === 'function' && bits.length) {
+                        window.mpdToast(`${username} — ${bits.join(', ')}`, { duration: 1800 });
+                    }
+                    setTimeout(() => row.classList.remove('saved'), 900);
+                } catch (err) {
+                    statusEl.textContent = _t('users_admin.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                } finally {
+                    inp.disabled = false;
+                    if (sel) sel.disabled = sel.dataset.selfLock === '1';
+                    if (btn) btn.disabled = !row.classList.contains('is-dirty');
+                }
+            }
+
+            async function loadAndRender() {
+                tableEl.innerHTML = `<div class="alb-settings-status">${_t('users_admin.loading', null, 'Lade…')}</div>`;
+                try {
+                    const r = await fetch(`${API_BASE}/api/admin/users`);
+                    if (!r.ok) {
+                        const d = await r.json().catch(() => ({}));
+                        throw new Error(d.detail || r.statusText);
+                    }
+                    const data = await r.json();
+                    const users    = data.users || [];
+                    const selfUser = data.self || '';
+                    const adminCount = users.filter(u => u.role === 'admin').length;
+
+                    if (!users.length) {
+                        tableEl.innerHTML = `<div class="alb-settings-status">${_t('users_admin.empty', null, 'Keine User gefunden.')}</div>`;
+                        return;
+                    }
+                    const frag = document.createDocumentFragment();
+                    const head = document.createElement('div');
+                    head.className = 'alb-users-head';
+                    head.innerHTML = `<div>${_t('users_admin.head_user', null, 'User')}</div><div>${_t('users_admin.head_role', null, 'Rolle')}</div><div>${_t('users_admin.head_display', null, 'Vorname')}</div><div></div>`;
+                    frag.appendChild(head);
+
+                    const roleOptions = ['admin', 'editor', 'viewer'];
+
+                    users.forEach(u => {
+                        const row = document.createElement('div');
+                        row.className = 'alb-users-row';
+                        row.dataset.username = u.username;
+                        const display  = u.display_name || '';
+                        const isSelf   = u.username === selfUser;
+                        const lastAdmin = u.role === 'admin' && adminCount <= 1;
+                        const delLocked = isSelf || lastAdmin;
+                        const delTitle = isSelf
+                            ? _t('users_admin.del_self', null, 'Eigener User kann nicht gelöscht werden.')
+                            : (lastAdmin ? _t('users_admin.del_last_admin', null, 'Letzter Admin — kann nicht gelöscht werden.')
+                                         : _t('users_admin.del_user_title', { user: u.username }, `${u.username} löschen`));
+                        const selectTitle = isSelf
+                            ? _t('users_admin.role_self', null, 'Eigene Rolle kann nicht geändert werden.')
+                            : (lastAdmin ? _t('users_admin.role_last_admin', null, 'Letzter Admin — Rolle kann nicht geändert werden.')
+                                         : _t('users_admin.role_for_user', null, 'Rolle für diesen User'));
+                        const selectLocked = isSelf || lastAdmin;
+                        const optsHtml = roleOptions.map(ro =>
+                            `<option value="${ro}"${ro === u.role ? ' selected' : ''}>${ro}</option>`
+                        ).join('');
+                        row.innerHTML = `
+                            <div class="alb-users-row-name" title="${escapeHtml(u.username)}">${escapeHtml(u.username)}</div>
+                            <select class="alb-users-role-select"
+                                    data-original="${escapeHtml(u.role || '')}"
+                                    data-self-lock="${selectLocked ? '1' : '0'}"
+                                    title="${escapeHtml(selectTitle)}"
+                                    ${selectLocked ? 'disabled' : ''}>${optsHtml}</select>
+                            <input type="text"
+                                   class="alb-users-row-display"
+                                   value="${escapeHtml(display)}"
+                                   placeholder="${escapeHtml(u.username)}"
+                                   autocomplete="off"
+                                   data-original="${escapeHtml(display)}">
+                            <div class="alb-users-actions">
+                                <button type="button" class="alb-users-commit" title="${_t('users_admin.commit_title', null, 'Übernehmen')}" disabled
+                                        aria-label="${_t('users_admin.commit_title', null, 'Übernehmen')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg></button>
+                                <button type="button" class="alb-users-pw" title="${_t('users_admin.pw_reset_title', null, 'Passwort zurücksetzen')}"
+                                        aria-label="${_t('users_admin.pw_reset_title', null, 'Passwort zurücksetzen')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></button>
+                                <button type="button" class="alb-users-del"
+                                        title="${escapeHtml(delTitle)}"
+                                        ${delLocked ? 'disabled' : ''}
+                                        aria-label="${_t('users_admin.del_user_aria', { user: u.username }, `${u.username} löschen`)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
+                            </div>`;
+                        frag.appendChild(row);
+                    });
+                    tableEl.innerHTML = '';
+                    tableEl.appendChild(frag);
+
+                    tableEl.querySelectorAll('.alb-users-row').forEach(row => {
+                        const inp = row.querySelector('.alb-users-row-display');
+                        const sel = row.querySelector('.alb-users-role-select');
+                        const btn = row.querySelector('.alb-users-commit');
+                        const pwBtn  = row.querySelector('.alb-users-pw');
+                        const delBtn = row.querySelector('.alb-users-del');
+                        inp.addEventListener('input', () => refreshRowDirty(row));
+                        inp.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') { e.preventDefault(); saveRow(row); }
+                        });
+                        if (sel) {
+                            sel.addEventListener('change', () => refreshRowDirty(row));
+                            sel.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') { e.preventDefault(); saveRow(row); }
+                            });
+                        }
+                        btn.addEventListener('click', () => saveRow(row));
+                        pwBtn.addEventListener('click',  () => _openPwResetForm(row.dataset.username, statusEl));
+                        if (!delBtn.disabled) {
+                            delBtn.addEventListener('click', () =>
+                                _openUserDeleteConfirm(row.dataset.username, statusEl, loadAndRender));
+                        }
+                    });
+                } catch (err) {
+                    const _msg = _t('users_admin.error_prefix', { msg: (err.message || String(err)) }, `Fehler: ${err.message || err}`);
+                    tableEl.innerHTML = `<div class="alb-settings-status">${escapeHtml(_msg)}</div>`;
+                }
+            }
+
+            ov.querySelector('#alb-users-add').addEventListener('click', () =>
+                _openNewUserForm(statusEl, loadAndRender));
+
+            loadAndRender();
+        }
+
+        // ── Sub-Dialoge: + Neuer User, PW-Reset, Löschen ──────────────────
+        function _openNewUserForm(parentStatus, onDone) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-mail-overlay';
+            ov.innerHTML = `
+                <div class="alb-mail-box" role="dialog" aria-modal="true">
+                    <div class="alb-mail-header">
+                        <h3>${_t('users_admin.new_title', null, 'Neuer Benutzer')}</h3>
+                        <button type="button" class="alb-mail-close" aria-label="${_t('users_admin.close_aria', null, 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-mail-body">
+                        <div class="alb-mail-intro">
+                            ${_t('users_admin.new_intro', null, 'Legt einen neuen MPD-Hausbewohner mit eigenem Login an. Username nur aus Kleinbuchstaben, Ziffern, Punkt, Bindestrich, Unterstrich.')}
+                        </div>
+                        <label class="alb-mail-label" for="nu-username">${_t('users_admin.new_label_user', null, 'Username')}</label>
+                        <input id="nu-username" type="text" autocomplete="off" spellcheck="false"
+                               maxlength="32" placeholder="${_t('users_admin.new_user_placeholder', null, 'z. B. lisa')}">
+                        <label class="alb-mail-label" for="nu-role">${_t('users_admin.new_label_role', null, 'Rolle')}</label>
+                        <select id="nu-role">
+                            <option value="viewer">viewer</option>
+                            <option value="editor">editor</option>
+                            <option value="admin">admin</option>
+                        </select>
+                        <label class="alb-mail-label" for="nu-display">${_t('users_admin.new_label_display', null, 'Vorname')} <span class="alb-mail-label-opt">${_t('users_admin.new_label_optional', null, '(optional)')}</span></label>
+                        <input id="nu-display" type="text" autocomplete="off" maxlength="100"
+                               placeholder="${_t('users_admin.new_display_placeholder', null, 'Wie der User in Share-Mails erscheint')}">
+                        <label class="alb-mail-label" for="nu-pw">${_t('users_admin.new_label_pw', null, 'Passwort')} <span class="alb-mail-label-opt">${_t('users_admin.new_label_pw_min', null, '(min. 12 Zeichen)')}</span></label>
+                        <input id="nu-pw" type="password" autocomplete="new-password">
+                        <label class="alb-mail-label" for="nu-pw2">${_t('users_admin.new_label_pw2', null, 'Passwort bestätigen')}</label>
+                        <input id="nu-pw2" type="password" autocomplete="new-password">
+                        <div class="alb-mail-status" id="nu-status"></div>
+                        <div class="alb-mail-actions">
+                            <button type="button" class="alb-mail-cancel">${_t('users_admin.new_btn_cancel', null, 'Abbrechen')}</button>
+                            <button type="button" class="alb-mail-send">${_t('users_admin.new_btn_save', null, 'Anlegen')}</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const elUser   = ov.querySelector('#nu-username');
+            const elRole   = ov.querySelector('#nu-role');
+            const elDisp   = ov.querySelector('#nu-display');
+            const elPw     = ov.querySelector('#nu-pw');
+            const elPw2    = ov.querySelector('#nu-pw2');
+            const elStatus = ov.querySelector('#nu-status');
+            const btnCnc   = ov.querySelector('.alb-mail-cancel');
+            const btnSave  = ov.querySelector('.alb-mail-send');
+            const btnClose = ov.querySelector('.alb-mail-close');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnCnc.addEventListener('click', close);
+            btnClose.addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+            setTimeout(() => elUser.focus(), 30);
+
+            async function submit() {
+                const username = elUser.value.trim().toLowerCase();
+                const role     = elRole.value;
+                const display  = elDisp.value.trim();
+                const pw       = elPw.value;
+                const pw2      = elPw2.value;
+                if (!username) { elStatus.textContent = _t('users_admin.new_err_user_missing', null, 'Username fehlt.'); elUser.focus(); return; }
+                if (pw.length < 12) { elStatus.textContent = _t('users_admin.new_err_pw_short', null, 'Passwort mindestens 12 Zeichen.'); elPw.focus(); return; }
+                if (pw !== pw2) { elStatus.textContent = _t('users_admin.new_err_pw_mismatch', null, 'Passwörter stimmen nicht überein.'); elPw2.focus(); return; }
+
+                btnSave.disabled = true; btnCnc.disabled = true;
+                elStatus.textContent = _t('users_admin.new_status_creating', null, 'Lege an…');
+                try {
+                    const r = await fetch(`${API_BASE}/api/admin/users`, {
+                        method : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body   : JSON.stringify({
+                            username, role, password: pw,
+                            display_name: display || undefined,
+                        }),
+                    });
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.detail || r.statusText);
+                    if (typeof window.mpdToast === 'function') {
+                        window.mpdToast(_t('users_admin.new_toast_created', { user: username, role }, `User „${username}" angelegt (${role})`), { duration: 1800 });
+                    }
+                    close();
+                    if (typeof onDone === 'function') onDone();
+                } catch (err) {
+                    elStatus.textContent = _t('users_admin.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                } finally {
+                    btnSave.disabled = false; btnCnc.disabled = false;
+                }
+            }
+            btnSave.addEventListener('click', submit);
+            [elPw, elPw2, elUser, elDisp].forEach(el => el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); submit(); }
+            }));
+        }
+
+        function _openPwResetForm(username, parentStatus) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-mail-overlay';
+            // Intro mit dynamischem Username — t() ersetzt {user}, dann <strong> drumherum.
+            const introRaw = _t('users_admin.pw_intro', { user: '__U__' }, `Das neue Passwort überschreibt das bestehende. Alle aktiven Sessions von __U__ werden sofort ungültig.`);
+            const introHtml = introRaw.replace('__U__', `<strong>${escapeHtml(username)}</strong>`);
+            ov.innerHTML = `
+                <div class="alb-mail-box" role="dialog" aria-modal="true">
+                    <div class="alb-mail-header">
+                        <h3>${_t('users_admin.pw_title', { user: escapeHtml(username) }, `Passwort zurücksetzen — ${escapeHtml(username)}`)}</h3>
+                        <button type="button" class="alb-mail-close" aria-label="${_t('users_admin.close_aria', null, 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-mail-body">
+                        <div class="alb-mail-intro">${introHtml}</div>
+                        <label class="alb-mail-label" for="pr-pw">${_t('users_admin.pw_label_new', null, 'Neues Passwort')} <span class="alb-mail-label-opt">${_t('users_admin.new_label_pw_min', null, '(min. 12 Zeichen)')}</span></label>
+                        <input id="pr-pw" type="password" autocomplete="new-password">
+                        <label class="alb-mail-label" for="pr-pw2">${_t('users_admin.new_label_pw2', null, 'Passwort bestätigen')}</label>
+                        <input id="pr-pw2" type="password" autocomplete="new-password">
+                        <div class="alb-mail-status" id="pr-status"></div>
+                        <div class="alb-mail-actions">
+                            <button type="button" class="alb-mail-cancel">${_t('users_admin.new_btn_cancel', null, 'Abbrechen')}</button>
+                            <button type="button" class="alb-mail-send">${_t('users_admin.pw_btn_set', null, 'Passwort setzen')}</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const elPw     = ov.querySelector('#pr-pw');
+            const elPw2    = ov.querySelector('#pr-pw2');
+            const elStatus = ov.querySelector('#pr-status');
+            const btnCnc   = ov.querySelector('.alb-mail-cancel');
+            const btnSave  = ov.querySelector('.alb-mail-send');
+            const btnClose = ov.querySelector('.alb-mail-close');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnCnc.addEventListener('click', close);
+            btnClose.addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+            setTimeout(() => elPw.focus(), 30);
+
+            async function submit() {
+                const pw  = elPw.value;
+                const pw2 = elPw2.value;
+                if (pw.length < 12) { elStatus.textContent = _t('users_admin.pw_err_short', null, 'Mindestens 12 Zeichen.'); elPw.focus(); return; }
+                if (pw !== pw2) { elStatus.textContent = _t('users_admin.new_err_pw_mismatch', null, 'Passwörter stimmen nicht überein.'); elPw2.focus(); return; }
+
+                btnSave.disabled = true; btnCnc.disabled = true;
+                elStatus.textContent = _t('users_admin.pw_status_setting', null, 'Setze Passwort…');
+                try {
+                    const r = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(username)}`, {
+                        method : 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body   : JSON.stringify({ password: pw }),
+                    });
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.detail || r.statusText);
+                    if (typeof window.mpdToast === 'function') {
+                        window.mpdToast(_t('users_admin.pw_toast_done', { user: username }, `Passwort für ${username} neu gesetzt · Sessions invalidiert`), { duration: 2000 });
+                    }
+                    close();
+                } catch (err) {
+                    elStatus.textContent = _t('users_admin.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                } finally {
+                    btnSave.disabled = false; btnCnc.disabled = false;
+                }
+            }
+            btnSave.addEventListener('click', submit);
+            [elPw, elPw2].forEach(el => el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); submit(); }
+            }));
+        }
+
+        function _openUserDeleteConfirm(username, parentStatus, onDone) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            const ov = document.createElement('div');
+            ov.className = 'alb-mail-overlay';
+            const introRaw = _t('users_admin.del_intro', { user: '__U__' }, `Der Login wird entfernt und alle aktiven Sessions von __U__ werden ungültig. Der Personal-Ordner auf der Festplatte bleibt unangetastet — nur MPD verliert den Schlüssel dazu.`);
+            const introHtml = introRaw.replace('__U__', `<strong>${escapeHtml(username)}</strong>`);
+            ov.innerHTML = `
+                <div class="alb-mail-box" role="alertdialog" aria-modal="true">
+                    <div class="alb-mail-header">
+                        <h3>${_t('users_admin.del_title', { user: escapeHtml(username) }, `User „${escapeHtml(username)}" löschen?`)}</h3>
+                        <button type="button" class="alb-mail-close" aria-label="${_t('users_admin.close_aria', null, 'Schließen')}">&times;</button>
+                    </div>
+                    <div class="alb-mail-body">
+                        <div class="alb-mail-intro">${introHtml}</div>
+                        <div class="alb-mail-status" id="del-status"></div>
+                        <div class="alb-mail-actions">
+                            <button type="button" class="alb-mail-cancel">${_t('users_admin.del_btn_cancel', null, 'Abbrechen')}</button>
+                            <button type="button" class="alb-mail-send" style="background:#c94c4c;">${_t('users_admin.del_btn_delete', null, 'Löschen')}</button>
+                        </div>
+                    </div>
+                </div>`;
+            document.body.appendChild(ov);
+
+            const elStatus = ov.querySelector('#del-status');
+            const btnCnc   = ov.querySelector('.alb-mail-cancel');
+            const btnGo    = ov.querySelector('.alb-mail-send');
+            const btnClose = ov.querySelector('.alb-mail-close');
+
+            const close = () => { ov.remove(); document.removeEventListener('keydown', onKey); };
+            const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } };
+            ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+            btnCnc.addEventListener('click', close);
+            btnClose.addEventListener('click', close);
+            document.addEventListener('keydown', onKey);
+            setTimeout(() => btnGo.focus(), 30);
+
+            btnGo.addEventListener('click', async () => {
+                btnGo.disabled = true; btnCnc.disabled = true;
+                elStatus.textContent = _t('users_admin.del_status_deleting', null, 'Lösche…');
+                try {
+                    const r = await fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(username)}`, {
+                        method: 'DELETE',
+                    });
+                    const d = await r.json();
+                    if (!r.ok) throw new Error(d.detail || r.statusText);
+                    if (typeof window.mpdToast === 'function') {
+                        let sk = '';
+                        if (d.sessions_killed) {
+                            const skKey = d.sessions_killed === 1 ? 'users_admin.del_toast_sessions_one' : 'users_admin.del_toast_sessions_many';
+                            sk = _t(skKey, { count: d.sessions_killed }, ` · ${d.sessions_killed} Session${d.sessions_killed === 1 ? '' : 's'} invalidiert`);
+                        }
+                        window.mpdToast(_t('users_admin.del_toast_deleted', { user: username, sessions: sk }, `User „${username}" gelöscht${sk}`), { duration: 2200 });
+                    }
+                    close();
+                    if (typeof onDone === 'function') onDone();
+                } catch (err) {
+                    elStatus.textContent = _t('users_admin.error_prefix', { msg: (err.message || err) }, `Fehler: ${err.message || err}`);
+                    btnGo.disabled = false; btnCnc.disabled = false;
+                }
+            });
+        }
+
+        // ── Album löschen — Type-to-confirm + Undo-Toast ─────────────────
+        function _openDeleteConfirmModal(album) {
+            return new Promise(resolve => {
+                const titleToMatch = album.title || album.name;
+                const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+                const ov = document.createElement('div');
+                ov.className = 'alb-delete-overlay';
+                ov.innerHTML = `
+                    <div class="alb-delete-box" role="alertdialog" aria-modal="true">
+                        <div class="alb-delete-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></div>
+                        <h3>${_t('album_delete.title', { album: escapeHtml(titleToMatch) }, `Album „${escapeHtml(titleToMatch)}" löschen?`)}</h3>
+                        <div class="alb-delete-body">
+                            <strong>${_t('album_delete.what_happens', null, 'Was passiert:')}</strong>
+                            <ul>
+                                <li>${_t('album_delete.bullet_definition', null, 'Die Album-Definition wird entfernt — und damit alle Texte, das Layout, Karten, Touren, Audio-Verweise, die du im Album angelegt hast.')}</li>
+                                <li>${_t('album_delete.bullet_files', null, 'Der Foto-Ordner und die Bild-Dateien bleiben vollständig erhalten.')}</li>
+                                <li>${_t('album_delete.bullet_backup', null, 'Vor dem Löschen wird automatisch eine Sicherungskopie der album.json angelegt (10 Versionen werden vorgehalten).')}</li>
+                                <li>${_t('album_delete.bullet_undo', null, 'Direkt nach dem Löschen erscheint 10 Sekunden lang ein „Rückgängig"-Button.')}</li>
+                            </ul>
+                        </div>
+                        <label class="alb-delete-prompt" for="alb-delete-input">
+                            ${_t('album_delete.prompt_prefix', null, 'Tippe')} <code>${escapeHtml(titleToMatch)}</code> ${_t('album_delete.prompt_suffix', null, 'exakt zur Bestätigung:')}
+                        </label>
+                        <input type="text" id="alb-delete-input"
+                               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+                        <div class="alb-delete-actions">
+                            <button class="alb-delete-cancel" type="button">${_t('album_delete.btn_cancel', null, 'Abbrechen')}</button>
+                            <button class="alb-delete-go"     type="button" disabled>${_t('album_delete.btn_confirm', null, 'Endgültig löschen')}</button>
+                        </div>
+                    </div>`;
+                document.body.appendChild(ov);
+
+                const inp    = ov.querySelector('#alb-delete-input');
+                const btnGo  = ov.querySelector('.alb-delete-go');
+                const btnCnc = ov.querySelector('.alb-delete-cancel');
+
+                let done = false;
+                const close = (val) => {
+                    if (done) return;
+                    done = true;
+                    document.removeEventListener('keydown', onKey);
+                    ov.remove();
+                    resolve(val);
+                };
+                const onKey = (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault(); e.stopPropagation();
+                        close(false);
+                    } else if (e.key === 'Enter' && !btnGo.disabled) {
+                        e.preventDefault(); e.stopPropagation();
+                        close(true);
+                    }
+                };
+                ov.addEventListener('click', (e) => { if (e.target === ov) close(false); });
+                btnCnc.addEventListener('click', () => close(false));
+                btnGo.addEventListener('click',  () => close(true));
+                inp.addEventListener('input', () => {
+                    btnGo.disabled = (inp.value !== titleToMatch);
+                });
+                document.addEventListener('keydown', onKey);
+                setTimeout(() => inp.focus(), 30);
+            });
+        }
+
+        async function _confirmDeleteAlbum(album) {
+            const ok = await _openDeleteConfirmModal(album);
+            if (!ok) return;
+            try {
+                const r = await fetch(
+                    `${API_BASE}/api/album/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}`,
+                    { method: 'DELETE' }
+                );
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.detail || r.statusText);
+                const backupFilename = data.backup;
+
+                // Snapshot fuer Undo (album-Objekt referenziert das Original — bleibt waehrend des Toast-Fensters gueltig)
+                const albumSnap = { space: album.space, name: album.name, title: album.title || album.name };
+
+                allAlbums = allAlbums.filter(a => !(a.space === album.space && a.name === album.name));
+                renderAlbums();
+                renderStats();
+
+                const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+                if (typeof window.mpdToast === 'function') {
+                    window.mpdToast(_t('album_delete.toast_deleted', { album: albumSnap.title }, `Album „${albumSnap.title}" gelöscht`), {
+                        duration: 10000,
+                        action  : _t('album_delete.toast_undo_action', null, 'Rückgängig'),
+                        onAction: () => _undoDeleteAlbum(albumSnap, backupFilename),
+                    });
+                } else {
+                    alert(_t('album_delete.alert_no_toast', null, 'Album gelöscht. Hinweis: Toast-Modul nicht verfügbar — Undo nur über Backup-Datei möglich.'));
+                }
+            } catch (err) {
+                const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+                alert(_t('album_delete.alert_delete_failed', { msg: (err.message || err) }, 'Fehler beim Löschen: ' + (err.message || err)));
+            }
+        }
+
+        async function _undoDeleteAlbum(albumSnap, backupFilename) {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            if (!backupFilename) {
+                alert(_t('album_delete.alert_no_backup', null, 'Backup-Referenz fehlt — Wiederherstellung nicht möglich.'));
+                return;
+            }
+            try {
+                const url = `${API_BASE}/api/album/${encodeURIComponent(albumSnap.space)}/${encodeURIComponent(albumSnap.name)}/undo-delete?backup_filename=${encodeURIComponent(backupFilename)}`;
+                const r = await fetch(url, { method: 'POST' });
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(data.detail || r.statusText);
+                // Frische Liste vom Server holen (sicherer als manuelles Re-insert mit potenziell veralteten Stats)
+                await loadAlbums();
+                if (typeof window.mpdToast === 'function') {
+                    window.mpdToast(_t('album_delete.toast_restored', { album: albumSnap.title }, `„${albumSnap.title}" wiederhergestellt`), { duration: 2500 });
+                }
+            } catch (err) {
+                alert(_t('album_delete.alert_restore_failed', { msg: (err.message || err) }, 'Wiederherstellen fehlgeschlagen: ' + (err.message || err)));
+            }
+        }
+
+        // ── Save-Helper: aktuelles album.json holen + per /update zurueckschreiben ──
+        async function _fetchAlbumForEdit(album) {
+            const r = await fetch(`${API_BASE}/api/album/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}`);
+            if (!r.ok) throw new Error(`Album laden: HTTP ${r.status}`);
+            return await r.json();
+        }
+        async function _saveAlbum(album, data) {
+            const r = await fetch(
+                `${API_BASE}/api/album/${encodeURIComponent(album.space)}/${encodeURIComponent(album.name)}/update`,
+                {
+                    method : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body   : JSON.stringify(data),
+                }
+            );
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.detail || `Speichern: HTTP ${r.status}`);
+            return d;
+        }
+
+        function showError(message) {
+            const _warnSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:1em;height:1em;vertical-align:-0.12em;margin-right:.4em"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+            document.getElementById('content').innerHTML = `<div class="error"><h2>${_warnSvg}Fehler</h2><p>${escapeHtml(message)}</p></div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadAlbums();
+
+        // Memories-Teaser: nur sichtbar wenn heute Erinnerungen da sind.
+        async function loadMemoriesTeaser() {
+            try {
+                // limit=6: dieselbe Auswahl wie die App (Rangfolge im Server,
+                // 08.09.2026); total ist die volle Zahl des Tages.
+                const r = await fetch(`${API_BASE}/api/memories?limit=6`);
+                if (!r.ok) return;
+                const data  = await r.json();
+                const years = data.years || [];
+                if (!years.length) return;
+                const total = typeof data.total === 'number' ? data.total
+                            : years.reduce((s, y) => s + (y.photos || []).length, 0);
+                const tr = (k, vars) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : k);
+                const word = total === 1 ? tr('index.teaser_memory') : tr('index.teaser_memories');
+                let text;
+                if (years.length === 1) {
+                    const y = years[0];
+                    text = tr('index.teaser_single', { ago: y.years_ago, year: y.year, total, word });
+                } else {
+                    const agos = years.map(y => y.years_ago).sort((a, b) => a - b);
+                    const head = agos.slice(0, -1).join(', ');
+                    const andc = tr('index.teaser_and');
+                    const joined = `${head} ${andc} ${agos[agos.length - 1]}`;
+                    text = tr('index.teaser_multi', { ago: joined, total, word });
+                }
+                document.getElementById('memories-teaser-text').textContent = text;
+                document.getElementById('memories-teaser').hidden = false;
+                window._memoriesData = data; // fürs Overlay
+            } catch (_) { /* silent — Teaser ist optional */ }
+        }
+
+        // Memories-Overlay (04.09.2026): Web-Ansicht der Tages-Erinnerungen.
+        // Daten kommen aus dem Teaser-Fetch; Klick auf ein Foto öffnet das
+        // Album, aus dem es stammt (Space steckt in der Thumbnail-URL).
+        function openMemoriesOverlay() {
+            const data = window._memoriesData;
+            if (!data || !(data.years || []).length) return;
+            const tr = (k, vars) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : k);
+            const overlay = document.getElementById('mem-overlay');
+            const body    = document.getElementById('mem-body');
+            const title   = document.getElementById('mem-title');
+            const tTitle  = tr('index.mem_title', { label: data.label || '' });
+            title.textContent = (tTitle === 'index.mem_title')
+                ? `Heute vor … — ${data.label || ''}` : tTitle;
+            body.textContent = '';
+            data.years.forEach(block => {
+                const sec = document.createElement('div');
+                sec.className = 'mem-year';
+                const h = document.createElement('h3');
+                const tYear = tr('index.mem_year_head', { ago: block.years_ago });
+                h.textContent = (tYear === 'index.mem_year_head')
+                    ? `vor ${block.years_ago} Jahren` : tYear;
+                const sub = document.createElement('span');
+                sub.className = 'mem-year-sub';
+                sub.textContent = ` · ${block.year}`;
+                h.appendChild(sub);
+                sec.appendChild(h);
+                const grid = document.createElement('div');
+                grid.className = 'mem-grid';
+                (block.photos || []).forEach(ph => {
+                    const a = document.createElement('a');
+                    a.className = 'mem-tile';
+                    const space = (ph.thumbnail_url || '').includes('space=personal') ? 'personal' : 'shared';
+                    a.href = `/album.html?space=${encodeURIComponent(space)}&name=${encodeURIComponent(ph.album)}`;
+                    const img = document.createElement('img');
+                    img.loading = 'lazy';
+                    img.src = ph.thumbnail_url;
+                    img.alt = ph.filename || '';
+                    a.appendChild(img);
+                    if (ph.location) {
+                        const loc = document.createElement('div');
+                        loc.className = 'mem-loc';
+                        loc.textContent = ph.location;
+                        a.appendChild(loc);
+                    }
+                    grid.appendChild(a);
+                });
+                sec.appendChild(grid);
+                const shown = (block.photos || []).length;
+                if (typeof block.total === 'number' && block.total > shown && shown) {
+                    const first = block.photos[0];
+                    const more = document.createElement('a');
+                    more.className = 'mem-more';
+                    const sp = (first.thumbnail_url || '').includes('space=personal') ? 'personal' : 'shared';
+                    more.href = `/album.html?space=${encodeURIComponent(sp)}&name=${encodeURIComponent(first.album)}`;
+                    const tMore = tr('index.mem_more', { n: block.total - shown });
+                    more.textContent = (tMore === 'index.mem_more') ? `und ${block.total - shown} weitere` : tMore;
+                    sec.appendChild(more);
+                }
+                body.appendChild(sec);
+            });
+            overlay.hidden = false;
+            document.addEventListener('keydown', _memEsc);
+            overlay.addEventListener('click', _memBackdrop);
+        }
+        function closeMemoriesOverlay() {
+            document.getElementById('mem-overlay').hidden = true;
+            document.removeEventListener('keydown', _memEsc);
+        }
+        function _memEsc(e) { if (e.key === 'Escape') closeMemoriesOverlay(); }
+        function _memBackdrop(e) { if (e.target === document.getElementById('mem-overlay')) closeMemoriesOverlay(); }
+        if (window.MPD_I18N && window.MPD_I18N.onReady) {
+            window.MPD_I18N.onReady(loadMemoriesTeaser);
+        } else {
+            loadMemoriesTeaser();
+        }
+    </script>
+
+    <!-- FAB: Album hinzufügen (Mobile) -->
+    <button class="fab-add-album" id="fab-add-album" onclick="openScanModal()" data-i18n-attr="title:index.fab_title" title="Album hinzufügen">+</button>
+
+    <!-- Scan-Modal: Ordner ohne album.json + neues leeres Album anlegen -->
+    <div class="mpd-modal-overlay" id="scan-modal-overlay">
+        <div class="mpd-modal">
+            <h3 data-i18n="scan_modal.title">Album hinzufügen</h3>
+
+            <!-- PDX v1.4: leeres Mixed-Album direkt aus MPD anlegen -->
+            <div id="cm-create-empty-row" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.6rem">
+                <input type="text" id="cm-new-name"
+                       data-i18n-attr="placeholder:scan_modal.new_name_placeholder"
+                       placeholder="Name für neues, leeres Album …"
+                       maxlength="120"
+                       style="flex:1;min-width:0;padding:.45rem .6rem;border-radius:6px;border:1px solid var(--border,#444);background:var(--surface,#1a1a1a);color:var(--text,#e0e0e0);font:inherit">
+                <div id="cm-space-row" style="display:none;gap:.6rem;font-size:.85rem;color:var(--muted,#888)"></div>
+                <button class="btn-create" id="btn-create-empty" onclick="submitCreateEmpty()" data-i18n="scan_modal.btn_create_empty">Anlegen</button>
+            </div>
+            <div id="cm-create-empty-status" style="font-size:.85rem;color:var(--muted,#888);min-height:1.2em;margin-bottom:.6rem"></div>
+            <div style="font-size:.8rem;color:var(--muted,#888);text-align:center;margin:.4rem 0 .8rem;letter-spacing:.05em;text-transform:uppercase;opacity:.7" data-i18n="scan_modal.divider">oder Ordner mit Fotos auswählen</div>
+
+            <div class="scan-info" id="scan-info" data-i18n="scan_modal.info_searching">Suche Ordner ohne Album …</div>
+            <div class="folder-list" id="folder-list"></div>
+            <div class="mpd-modal-actions">
+                <button class="btn-modal-cancel" onclick="closeScanModal()" data-i18n="scan_modal.btn_close">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Erstell-Modal -->
+    <div class="mpd-modal-overlay" id="create-modal-overlay">
+        <div class="mpd-modal">
+            <h3 data-i18n="create_modal.title">Album erstellen</h3>
+
+            <div class="create-field">
+                <label data-i18n="create_modal.label_folder">Ordner</label>
+                <span class="field-value" id="cm-folder">–</span>
+            </div>
+
+            <div class="create-field">
+                <label data-i18n="create_modal.label_title">Titel</label>
+                <span class="field-value" id="cm-title">–</span>
+            </div>
+
+            <div class="create-field">
+                <label data-i18n="create_modal.label_thumbnail">Titelbild</label>
+                <div class="thumb-preview-row">
+                    <img class="thumb-preview-img" id="cm-thumb-img" src="" data-i18n-attr="alt:create_modal.thumb_alt" alt="Titelbild">
+                    <span class="thumb-change-link" id="cm-thumb-change" onclick="openThumbPicker()" data-i18n="create_modal.thumb_change">Ändern …</span>
+                </div>
+                <div class="thumb-picker" id="thumb-picker"></div>
+            </div>
+
+            <div class="create-status" id="create-status"></div>
+
+            <div class="mpd-modal-actions">
+                <button class="btn-modal-cancel" onclick="closeCreateModal()" data-i18n="create_modal.btn_cancel">Abbrechen</button>
+                <button class="btn-create" id="btn-create" onclick="submitCreateAlbum()" data-i18n="create_modal.btn_create">Album erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── State ────────────────────────────────────────────────────────
+        let _cs = { space: '', folderName: '', thumbnail: '', pickerLoaded: false };
+
+        // ── Scan-Modal ───────────────────────────────────────────────────
+        async function openScanModal() {
+            const _t = (k, vars, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k, vars) : fb) || fb;
+            document.getElementById('scan-info').textContent = _t('scan_modal.info_searching', null, 'Suche Ordner ohne Album …');
+            document.getElementById('folder-list').innerHTML = '';
+            document.getElementById('scan-modal-overlay').classList.add('open');
+            _initCreateEmpty();  // PDX v1.4: leeres-Album-Anlegen-Zeile vorbereiten
+
+            try {
+                const res  = await fetch(`${API_BASE}/api/albums/without-json`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                if (!data.folders || data.folders.length === 0) {
+                    document.getElementById('scan-info').textContent = _t('scan_modal.info_empty', null, 'Keine Ordner ohne Album gefunden.');
+                    return;
+                }
+
+                document.getElementById('scan-info').textContent =
+                    _t('scan_modal.info_found', { count: data.folders.length }, `${data.folders.length} Ordner gefunden – Ordner auswählen:`);
+
+                const list = document.getElementById('folder-list');
+                data.folders.forEach(folder => {
+                    const item = document.createElement('div');
+                    item.className = 'folder-item';
+
+                    const thumbHtml = folder.first_photo
+                        ? `<img class="folder-thumb" src="${API_BASE}/api/thumbnail/${encodeURIComponent(folder.space)}/${encodeURIComponent(folder.folder_name)}/${encodeURIComponent(folder.first_photo)}?size=sm" loading="lazy" decoding="async" alt="">`
+                        : `<div class="folder-thumb-placeholder">📁</div>`;
+
+                    const spaceClass = folder.space === 'personal' ? 'personal' : 'shared';
+                    const mediaKey = folder.media_count === 1 ? 'scan_modal.media_count_one' : 'scan_modal.media_count_many';
+                    const mediaFb = `${folder.media_count} Mediendatei${folder.media_count !== 1 ? 'en' : ''}`;
+                    const mediaTxt = _t(mediaKey, { count: folder.media_count }, mediaFb);
+
+                    item.innerHTML = `
+                        ${thumbHtml}
+                        <div class="folder-info">
+                            <div class="folder-name">${escapeHtml(folder.folder_name)}</div>
+                            <div class="folder-meta">
+                                <span class="space-badge-sm ${spaceClass}">${folder.space}</span>
+                                ${mediaTxt}
+                            </div>
+                        </div>
+                    `;
+                    item.onclick = () => openCreateModal(folder);
+                    list.appendChild(item);
+                });
+            } catch (e) {
+                document.getElementById('scan-info').textContent = _t('scan_modal.info_error', { msg: e.message }, `Fehler: ${escapeHtml(e.message)}`);
+            }
+        }
+
+        function closeScanModal() {
+            document.getElementById('scan-modal-overlay').classList.remove('open');
+        }
+
+        document.getElementById('scan-modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) closeScanModal();
+        });
+
+        // ── Erstell-Modal ────────────────────────────────────────────────
+        function openCreateModal(folder) {
+            closeScanModal();
+
+            _cs = { space: folder.space, folderName: folder.folder_name,
+                    thumbnail: folder.first_photo || '', pickerLoaded: false };
+
+            document.getElementById('cm-folder').textContent  = folder.folder_name;
+            document.getElementById('cm-title').textContent   = folder.folder_name;
+            document.getElementById('create-status').textContent = '';
+            document.getElementById('btn-create').disabled    = false;
+
+            const img = document.getElementById('cm-thumb-img');
+            if (folder.first_photo) {
+                img.src = `${API_BASE}/api/thumbnail/${encodeURIComponent(folder.space)}/${encodeURIComponent(folder.folder_name)}/${encodeURIComponent(folder.first_photo)}?size=sm`;
+                document.getElementById('cm-thumb-change').style.display = '';
+            } else {
+                img.src = '';
+                document.getElementById('cm-thumb-change').style.display = 'none';
+            }
+
+            const picker = document.getElementById('thumb-picker');
+            picker.classList.remove('open');
+            picker.innerHTML = '';
+
+            document.getElementById('create-modal-overlay').classList.add('open');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('create-modal-overlay').classList.remove('open');
+            document.getElementById('thumb-picker').classList.remove('open');
+        }
+
+        document.getElementById('create-modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) closeCreateModal();
+        });
+
+        // ESC schließt das jeweils oberste offene Modal.
+        // Reihenfolge wichtig: Thumb-Picker > Create-Modal > Scan-Modal.
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') return;
+            const picker = document.getElementById('thumb-picker');
+            if (picker && picker.classList.contains('open')) {
+                picker.classList.remove('open');
+                return;
+            }
+            const createOv = document.getElementById('create-modal-overlay');
+            if (createOv && createOv.classList.contains('open')) {
+                closeCreateModal();
+                return;
+            }
+            const scanOv = document.getElementById('scan-modal-overlay');
+            if (scanOv && scanOv.classList.contains('open')) {
+                closeScanModal();
+                return;
+            }
+        });
+
+        // ── Thumbnail-Picker ─────────────────────────────────────────────
+        async function openThumbPicker() {
+            const picker = document.getElementById('thumb-picker');
+            picker.classList.toggle('open');
+            if (!picker.classList.contains('open') || _cs.pickerLoaded) return;
+
+            picker.innerHTML = '<div class="thumb-picker-msg">Lade Fotos …</div>';
+            try {
+                const res  = await fetch(`${API_BASE}/api/album/files?space=${encodeURIComponent(_cs.space)}&folder=${encodeURIComponent(_cs.folderName)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                picker.innerHTML = '';
+                data.files.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'thumb-picker-item' + (file.filename === _cs.thumbnail ? ' selected' : '');
+                    item.innerHTML = `<img src="${API_BASE}${file.thumbnail}" loading="lazy" decoding="async" alt="${escapeHtml(file.filename)}">`;
+                    item.onclick = () => selectThumbnail(file.filename, item);
+                    picker.appendChild(item);
+
+                    // Zoom preview (hover loupe + long press) — same as Mixed-Picker.
+                    if (typeof window.attachZoomTrigger === 'function') {
+                        const xlUrl = `${API_BASE}/api/thumbnail/${encodeURIComponent(_cs.space)}/${encodeURIComponent(_cs.folderName)}/${encodeURIComponent(file.filename)}?size=xl`;
+                        window.attachZoomTrigger(item, xlUrl, { alt: file.filename });
+                    }
+                });
+                _cs.pickerLoaded = true;
+            } catch (e) {
+                picker.innerHTML = `<div class="thumb-picker-msg">Fehler: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function selectThumbnail(filename, itemEl) {
+            _cs.thumbnail = filename;
+            document.querySelectorAll('.thumb-picker-item').forEach(el => el.classList.remove('selected'));
+            itemEl.classList.add('selected');
+            document.getElementById('cm-thumb-img').src =
+                `${API_BASE}/api/thumbnail/${encodeURIComponent(_cs.space)}/${encodeURIComponent(_cs.folderName)}/${encodeURIComponent(filename)}?size=sm`;
+            document.getElementById('thumb-picker').classList.remove('open');
+        }
+
+        // ── Album erstellen ──────────────────────────────────────────────
+        async function submitCreateAlbum() {
+            if (!_cs.thumbnail) {
+                document.getElementById('create-status').textContent = 'Kein Titelbild gewählt.';
+                return;
+            }
+            const btn    = document.getElementById('btn-create');
+            const status = document.getElementById('create-status');
+            btn.disabled = true;
+            status.textContent = 'Erstelle Album …';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/album/create`, {
+                    method : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body   : JSON.stringify({
+                        space      : _cs.space,
+                        folder_name: _cs.folderName,
+                        thumbnail  : _cs.thumbnail,
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    status.textContent = `Fehler: ${data.detail || res.status}`;
+                    btn.disabled = false;
+                    return;
+                }
+                status.textContent = `✓ Album erstellt (${data.elements} Elemente)`;
+                setTimeout(() => {
+                    closeCreateModal();
+                    allAlbums = [];
+                    document.getElementById('content').innerHTML = '<div class="loading">Lade Alben …</div>';
+                    loadAlbums();
+                }, 800);
+            } catch (e) {
+                status.textContent = `Fehler: ${e.message}`;
+                btn.disabled = false;
+            }
+        }
+
+        // ── PDX v1.4: leeres Mixed-Album anlegen ─────────────────────────
+        async function _initCreateEmpty() {
+            const nameInput = document.getElementById('cm-new-name');
+            const status    = document.getElementById('cm-create-empty-status');
+            const btn       = document.getElementById('btn-create-empty');
+            const row       = document.getElementById('cm-space-row');
+
+            nameInput.value      = '';
+            status.textContent   = '';
+            btn.disabled         = false;
+            row.style.display    = 'none';
+            row.innerHTML        = '';
+            row.dataset.defaultSpace = '';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/spaces-writable`);
+                if (!res.ok) return;
+                const data   = await res.json();
+                const spaces = data.spaces || [];
+                if (spaces.length === 0) {
+                    btn.disabled = true;
+                    status.textContent = 'Kein schreibbarer Space verfügbar.';
+                    return;
+                }
+                row.dataset.defaultSpace = spaces[0];
+                if (spaces.length > 1) {
+                    row.style.display = 'flex';
+                    spaces.forEach((s, i) => {
+                        const lbl = document.createElement('label');
+                        lbl.style.cssText = 'display:flex;align-items:center;gap:.25rem;cursor:pointer';
+                        lbl.innerHTML = `<input type="radio" name="cm-space" value="${escapeHtml(s)}" ${i === 0 ? 'checked' : ''}> ${escapeHtml(s)}`;
+                        row.appendChild(lbl);
+                    });
+                }
+            } catch (_) {
+                // silently — Backend lehnt im Zweifel ab, Fehler erscheint dann oben
+            }
+        }
+
+        function _selectedEmptySpace() {
+            const row = document.getElementById('cm-space-row');
+            const checked = row.querySelector('input[name="cm-space"]:checked');
+            return checked ? checked.value : (row.dataset.defaultSpace || '');
+        }
+
+        async function submitCreateEmpty() {
+            const nameInput = document.getElementById('cm-new-name');
+            const status    = document.getElementById('cm-create-empty-status');
+            const btn       = document.getElementById('btn-create-empty');
+            const name      = nameInput.value.trim();
+
+            if (!name) {
+                status.textContent = 'Bitte einen Namen eingeben.';
+                nameInput.focus();
+                return;
+            }
+            const space = _selectedEmptySpace();
+            if (!space) {
+                status.textContent = 'Kein Space verfügbar.';
+                return;
+            }
+
+            btn.disabled = true;
+            status.textContent = 'Lege Album an …';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/album/create-empty`, {
+                    method : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body   : JSON.stringify({ space, folder_name: name }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    status.textContent = data.detail || `Fehler ${res.status}`;
+                    btn.disabled = false;
+                    return;
+                }
+                // Direkt ins neue Album — leeres Album öffnet auto im Edit-Mode.
+                window.location.href = `/album.html?space=${encodeURIComponent(data.space)}&name=${encodeURIComponent(data.folder_name)}`;
+            } catch (e) {
+                status.textContent = `Fehler: ${e.message}`;
+                btn.disabled = false;
+            }
+        }
+
+        // Enter im Name-Input loest Anlegen aus
+        document.getElementById('cm-new-name').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitCreateEmpty();
+            }
+        });
+    </script>
+    <script src="/js/search.js"></script>
+    <script src="/js/theme.js?v=3"></script>
+    <script src="/js/photo-zoom.js"></script>
+</body>
+</html>

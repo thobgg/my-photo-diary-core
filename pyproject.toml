@@ -1,0 +1,36 @@
+[project]
+name = "my-photo-diary"
+version = "2.0.0"
+description = "Selbstgehostete Foto-Tagebuch- und Erinnerungs-App für Synology NAS"
+authors = [{ name = "Thomas Bugge", email = "thomas@bgg-mail.de" }]
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+exclude = [
+    ".git",
+    "__pycache__",
+    "frontend",
+    "backend/tests/fixtures",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+]
+ignore = [
+    "E501",   # line-too-long (handled by formatter, we have long f-strings)
+    "B008",   # FastAPI uses function calls in defaults (Depends, Query)
+    "SIM108", # ternary vs. if/else — readability is subjective
+]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = ["test_*.py"]
+addopts = "-q --tb=short"
