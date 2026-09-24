@@ -18,6 +18,23 @@ diary is here. Optional **MPD Plus** modules add analysis on top — see
 
 ---
 
+## Install on Synology
+
+A Synology package (`.spk`) for DSM 7 is published with the
+[releases](https://github.com/thobgg/my-photo-diary-core/releases). It
+installs through Package Center → Manual Install, asks for your photo share and
+accounts in a wizard, and needs Container Manager. See the
+[installation guide](spk/docs/MPD_Installationsanleitung_v0_2.pdf) (PDF, German; a bilingual HTML version ships inside the package).
+
+| | |
+|---|---|
+| ![Wizard: photo share](spk/docs/screenshots/02-wizard-fotos.png) | ![Wizard: accounts and roles](spk/docs/screenshots/03-wizard-benutzer.png) |
+| The wizard asks for the name of the photo share, not a path | One role per DSM account; MPD keeps its own login |
+
+![Package Center: My Photo Diary is running](spk/docs/screenshots/05-paketzentrum-laeuft.png)
+
+---
+
 ## Why MPD
 
 - **Your files stay files.** An album *is* a folder with your photos and one
@@ -155,18 +172,7 @@ so shared links point to the right address.
 
 ### Synology package
 
-A Synology package (`.spk`) for DSM 7 is published with the
-[releases](https://github.com/thobgg/my-photo-diary-core/releases). It
-installs through Package Center → Manual Install, asks for your photo share and
-accounts in a wizard, and needs Container Manager. See the
-[installation guide](spk/docs/installation.html).
-
-| | |
-|---|---|
-| ![Wizard: photo share](spk/docs/screenshots/02-wizard-fotos.png) | ![Wizard: accounts and roles](spk/docs/screenshots/03-wizard-benutzer.png) |
-| The wizard asks for the name of the photo share, not a path | One role per DSM account; MPD keeps its own login |
-
-![Package Center: My Photo Diary is running](spk/docs/screenshots/05-paketzentrum-laeuft.png)
+See [Install on Synology](#install-on-synology) above.
 
 ## Where your data lives
 

@@ -18,6 +18,23 @@ führen, zu schreiben und zu teilen, steckt hier drin. Die optionalen Module
 
 ---
 
+## Installation auf der Synology
+
+Ein Synology-Paket (`.spk`) für DSM 7 liegt bei den
+[Releases](https://github.com/thobgg/my-photo-diary-core/releases). Es wird über
+Paket-Zentrum → Manuelle Installation eingespielt, fragt in einem Assistenten
+nach Foto-Freigabe und Konten und braucht den Container Manager. Einzelheiten in
+der [Installationsanleitung](spk/docs/MPD_Installationsanleitung_v0_2.pdf) (PDF).
+
+| | |
+|---|---|
+| ![Assistent: Foto-Freigabe](spk/docs/screenshots/02-wizard-fotos.png) | ![Assistent: Konten und Rollen](spk/docs/screenshots/03-wizard-benutzer.png) |
+| Der Assistent fragt nach dem Namen der Foto-Freigabe, nicht nach einem Pfad | Eine Rolle je DSM-Konto; MPD hat eine eigene Anmeldung |
+
+![Paket-Zentrum: My Photo Diary läuft](spk/docs/screenshots/05-paketzentrum-laeuft.png)
+
+---
+
 ## Warum MPD
 
 - **Deine Dateien bleiben Dateien.** Ein Album *ist* ein Ordner mit deinen
@@ -161,18 +178,7 @@ geteilte Links auf die richtige Adresse zeigen.
 
 ### Synology-Paket
 
-Ein Synology-Paket (`.spk`) für DSM 7 liegt bei den
-[Releases](https://github.com/thobgg/my-photo-diary-core/releases). Es wird über
-Paket-Zentrum → Manuelle Installation eingespielt, fragt in einem Assistenten
-nach Foto-Freigabe und Konten und braucht den Container Manager. Einzelheiten in
-der [Installationsanleitung](spk/docs/installation.html).
-
-| | |
-|---|---|
-| ![Assistent: Foto-Freigabe](spk/docs/screenshots/02-wizard-fotos.png) | ![Assistent: Konten und Rollen](spk/docs/screenshots/03-wizard-benutzer.png) |
-| Der Assistent fragt nach dem Namen der Foto-Freigabe, nicht nach einem Pfad | Eine Rolle je DSM-Konto; MPD hat eine eigene Anmeldung |
-
-![Paket-Zentrum: My Photo Diary läuft](spk/docs/screenshots/05-paketzentrum-laeuft.png)
+Siehe [Installation auf der Synology](#installation-auf-der-synology) oben.
 
 ## Wo deine Daten liegen
 
