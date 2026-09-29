@@ -85,7 +85,8 @@ async def prewarm_memories(reason: str = "startup") -> None:
     try:
         for u in list_users():
             rec = lookup(u)
-            if rec and rec.memories_scope == "personal" and rec.personal_path.is_dir():
+            if (rec and rec.memories_scope in ("personal", "both")
+                    and rec.personal_path.is_dir()):
                 targets.append((rec.personal_path, "personal", u))
     except Exception as e:
         logger.warning("memories prewarm: Nutzerliste fehlgeschlagen: %s", e)
@@ -109,15 +110,37 @@ def _require_memories(request: Request):
     return session
 
 
-def _scope_base(session):
-    """(photo_base, url_space) je nach memories_scope des Nutzers
-    (users.json, 03.09.2026). Bei personal kommt der Pfad IMMER aus der
-    eigenen Session — fremde Personal-Fotos sind damit unerreichbar."""
+def _scope_targets(session) -> list:
+    """[(photo_base, url_space), …] je nach memories_scope des Nutzers
+    (users.json, 03.09.2026; both seit 26.09.2026). Der Personal-Pfad
+    kommt IMMER aus der eigenen Session — fremde Personal-Fotos sind damit
+    unerreichbar. Bei both ohne eigenen Ordner bleibt es beim Shared-Scan."""
     from core.userdb import lookup
     rec = lookup(session.user)
-    if rec and rec.memories_scope == "personal":
-        return session.personal_path, "personal"
-    return PHOTO_PATH_SHARED, "shared"
+    scope = rec.memories_scope if rec else "both"
+    if scope == "personal":
+        return [(session.personal_path, "personal")]
+    targets = [(PHOTO_PATH_SHARED, "shared")]
+    if scope == "both" and session.personal_path.is_dir():
+        targets.append((session.personal_path, "personal"))
+    return targets
+
+
+async def _cached_scan(photo_base, target, url_space: str, user: str) -> list:
+    """Ein Bestand, aus dem Cache (mit Stale-Serve) oder frisch gescannt."""
+    # Scope/Nutzer gehören in den Cache-Schlüssel — Personal-Scans
+    # sind je Nutzer verschieden.
+    cache_key = _cache_key_for(target, url_space, user)
+    now = time.monotonic()
+    cached = _MEMORIES_CACHE.get(cache_key)
+    if cached and (now - cached[0]) < _MEMORIES_TTL_S:
+        return cached[1]
+    if cached:
+        # Stale-Serve: alten Stand sofort liefern, frisch im Hintergrund
+        _refresh_in_background(photo_base, target, url_space, cache_key)
+        return cached[1]
+    # Nie gescannt (z. B. Wunschdatum ?date=…): synchron
+    return await _scan_to_cache(photo_base, target, url_space, cache_key)
 
 
 @router.get("/api/memories")
@@ -130,27 +153,17 @@ async def get_memories(request: Request, date: str = Query(None, pattern=r"^\d{2
     session = _require_memories(request)
 
     try:
-        photo_base, url_space = _scope_base(session)
         if date:
             m, d   = date.split("-")
             target = date_type(date_type.today().year, int(m), int(d))
         else:
             target = date_type.today()
 
-        # Scope/Nutzer gehören in den Cache-Schlüssel — Personal-Scans
-        # sind je Nutzer verschieden.
-        cache_key = _cache_key_for(target, url_space, session.user)
-        now = time.monotonic()
-        cached = _MEMORIES_CACHE.get(cache_key)
-        if cached and (now - cached[0]) < _MEMORIES_TTL_S:
-            results = cached[1]
-        elif cached:
-            # Stale-Serve: alten Stand sofort liefern, frisch im Hintergrund
-            results = cached[1]
-            _refresh_in_background(photo_base, target, url_space, cache_key)
-        else:
-            # Nie gescannt (z. B. Wunschdatum ?date=…): synchron
-            results = await _scan_to_cache(photo_base, target, url_space, cache_key)
+        from diary_memories.scanner import merge_year_blocks
+        results = merge_year_blocks(*[
+            await _cached_scan(base, target, space, session.user)
+            for base, space in _scope_targets(session)
+        ])
 
         if limit:
             results = [dict(b, photos=b["photos"][:limit]) for b in results]

@@ -1021,7 +1021,14 @@ function renderAlbum(editMode = false) {
                    Knopf, der nichts tut, ist schlimmer als keiner.
                    Vollbild geht auf den ganzen Rahmen, nicht nur die Karte:
                    sonst waere der Knopf zum Beenden selbst nicht mehr zu
-                   sehen und es bliebe nur Escape. */
+                   sehen und es bliebe nur Escape.
+
+                   Ins Vollbild geht die Karte (.tour-card), nicht der
+                   aeussere Rahmen: Nur auf sie hoeren CSS (.tour-card:
+                   fullscreen) und der fullscreenchange-Handler in
+                   _initTourMap(). Seit dem Umbau auf zwei Ebenen (c1addf4)
+                   ging der Aufruf an den Rahmen — die Karte blieb im
+                   Vollbild auf ihrer festen Hoehe stehen (27.09.2026). */
                 if (document.fullscreenEnabled) {
                     const fsBtn = document.createElement('button');
                     fsBtn.className = 'tour-layer-btn tour-fs-btn';
@@ -1029,8 +1036,8 @@ function renderAlbum(editMode = false) {
                     fsBtn.title = (window.MPD_I18N ? window.MPD_I18N.t('element_actions.fullscreen') : 'Vollbild');
                     fsBtn.onclick = (e) => {
                         e.stopPropagation();
-                        if (document.fullscreenElement === tourWrap) document.exitFullscreen();
-                        else tourWrap.requestFullscreen().catch(() => {
+                        if (document.fullscreenElement === tourCard) document.exitFullscreen();
+                        else tourCard.requestFullscreen().catch(() => {
                             if (window.mpdToast) window.mpdToast(
                                 (window.MPD_I18N ? window.MPD_I18N.t('element_actions.fullscreen_failed')
                                                  : 'Vollbild ist hier nicht möglich'), { duration: 2200 });
@@ -1080,10 +1087,10 @@ function renderAlbum(editMode = false) {
 
                 // Load GPX + initialize map
                 const gpxUrl = `${API_BASE}/api/gpx/${encodeURIComponent(albumSpace)}/${encodeURIComponent(elem.source_album || albumName)}/${encodeURIComponent(elem.file)}`;
-                _initTourMap(elem.id, gpxUrl, mapDiv, statsBar, elevDiv, layerBtn,
+                _tourWennNah(tourWrap, () => _initTourMap(elem.id, gpxUrl, mapDiv, statsBar, elevDiv, layerBtn,
                     fotoBtn, albumSpace, elem.source_album || albumName,
                     elem.map_layer || 'osm',
-                    elem.show_elevation !== false);
+                    elem.show_elevation !== false));
             }
 
         // unknown types: skip gracefully (PDX forward compatibility)
@@ -1870,6 +1877,23 @@ document.addEventListener('keydown', (e) => {
 // Tour element helpers
 // ============================================
 
+/* Tour erst aufbauen, wenn sie in die Naehe kommt (27.09.2026 — "scrollen
+   immer noch ruckelig, das hat auch was mit dem Laden der Karte zu tun").
+   Bisher lud jedes Album beim Oeffnen ALLE Touren auf einmal: GPX holen,
+   parsen, Leaflet-Karte, Kacheln, Hoehenprofil — gleichzeitig mit den
+   Vorschaubildern, genau in den Sekunden, in denen man zu scrollen
+   anfaengt. Jetzt eine Tour nach der anderen, gut eine Bildschirmhoehe
+   bevor sie sichtbar wird. */
+function _tourWennNah(el, start) {
+    if (!('IntersectionObserver' in window)) { start(); return; }
+    const io = new IntersectionObserver((eintraege) => {
+        if (!eintraege.some(e => e.isIntersecting)) return;
+        io.disconnect();
+        start();
+    }, { rootMargin: '800px 0px' });
+    io.observe(el);
+}
+
 function _tourIcon(typeHint) {
     const icons = { hiking: '🥾', cycling: '🚴', running: '🏃', swimming: '🏊', walking: '🚶' };
     return icons[typeHint] || '📍';
@@ -2307,11 +2331,46 @@ async function _initTourMap(elemId, gpxUrl, mapDiv, statsBar, elevDiv, layerBtn,
         if (parsed.hasEle && showElevation) _renderElevationProfile(elevDiv, parsed.points);
 
         let currentLayer = mapLayer;
-        const map = L.map(mapDiv, { zoomControl: false, scrollWheelZoom: false, touchZoom: true });
-        L.control.zoom({ position: 'topright' }).addTo(map);
-        // Desktop: enable scroll-zoom only after click (no page-scroll trap)
-        mapDiv.addEventListener('click', () => map.scrollWheelZoom.enable());
-        mapDiv.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+        /* Im Album steht die Karte still, bedient wird sie im Vollbild
+           (27.09.2026). Anlass: "wenn man durch ein Album am Tablet/Handy
+           scrollt und da Touren eingebaut sind hakelt es". Mit dragging
+           setzt Leaflet touch-action:none auf die Karte, und jeder Wisch,
+           der auf ihr beginnt, verschiebt die Karte statt der Seite. Ein
+           Umweg ueber Zwei-Finger-Gesten hat das nur gemildert — erledigt
+           hat es erst: Zoomen und Verschieben NUR im Vollbild.
+           Im Album ist die Tour ein Bild, das man ansieht; wer darin
+           herumfahren will, hat im Vollbild ohnehin mehr Platz.
+
+           Ausnahme: Kann der Browser kein Vollbild (manche WebViews), gaebe
+           es keinen Weg zur Bedienung. Dann bleibt die Karte bedienbar,
+           auf Touch-Geraeten ohne Ein-Finger-Ziehen (pointer:coarse, nicht
+           Breite — das Tablet ist breit und trotzdem ein Finger).
+
+           Die Knoepfe im Kopf (Kartenart, Fotos) wirken weiter; Foto-
+           Sprechblasen gehen auch im Album auf.
+
+           preferCanvas: Die Route liegt zweimal auf der Karte (weisse
+           Unterlage, Magenta), jede mit allen Spurpunkten — als SVG sind das
+           zwei Pfade mit Tausenden Stuetzpunkten im DOM. Ein Canvas ist fuer
+           den Browser beim Scrollen eine einzige Flaeche. */
+        const nurVollbild = !!document.fullscreenEnabled;
+        const touch = window.matchMedia('(pointer: coarse)').matches;
+        const map = L.map(mapDiv, {
+            zoomControl: false, scrollWheelZoom: false, preferCanvas: true,
+            dragging:        !nurVollbild && !touch,
+            touchZoom:       !nurVollbild,
+            doubleClickZoom: !nurVollbild,
+            boxZoom:         !nurVollbild,
+            keyboard:        !nurVollbild,
+        });
+        const zoomCtl = L.control.zoom({ position: 'topright' });
+        const _bedienung = ['dragging', 'touchZoom', 'doubleClickZoom', 'boxZoom', 'keyboard', 'scrollWheelZoom'];
+        if (!nurVollbild) {
+            zoomCtl.addTo(map);
+            // Desktop: enable scroll-zoom only after click (no page-scroll trap)
+            mapDiv.addEventListener('click', () => map.scrollWheelZoom.enable());
+            mapDiv.addEventListener('mouseleave', () => map.scrollWheelZoom.disable());
+        }
         const initUrl  = mapLayer === 'topo' ? _TOPO_LAYER : _OSM_LAYER;
         const initAttr = mapLayer === 'topo' ? _ATTR_TOPO  : _ATTR_OSM;
         const initMax  = mapLayer === 'topo' ? 17 : 18;
@@ -2442,6 +2501,10 @@ async function _initTourMap(elemId, gpxUrl, mapDiv, statsBar, elevDiv, layerBtn,
         document.addEventListener('fullscreenchange', () => {
             if (!rahmen) return;
             const drin = document.fullscreenElement === rahmen;
+            if (nurVollbild) {
+                _bedienung.forEach(h => drin ? map[h].enable() : map[h].disable());
+                if (drin) zoomCtl.addTo(map); else zoomCtl.remove();
+            }
             if (drin) {
                 mapDiv.style.height  = '';
                 rahmen.style.maxWidth = '';

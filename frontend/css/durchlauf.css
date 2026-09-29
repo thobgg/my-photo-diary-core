@@ -66,3 +66,16 @@
 .dl-unscanned-row { display: flex; align-items: center; gap: .8rem; padding: .5rem .8rem; border-radius: 8px; background: var(--surface, #1f1f1f); border: 1px dashed var(--border, #444); font-size: .85rem; }
 .dl-unscanned-link { margin-left: auto; color: var(--blue, #5B9BD5); white-space: nowrap; text-decoration: none; font-weight: 600; }
 .dl-unscanned-link:hover { text-decoration: underline; }
+
+/* Offene Touren im Durchlauf (TOURS.md §4.4) */
+.dl-tours { margin: 0 0 1rem; display: flex; flex-direction: column; gap: .3rem; }
+.dl-tours-details { display: flex; flex-direction: column; gap: .3rem; }
+.dl-tours-details[open] > .dl-tour-row + .dl-tour-row { margin-top: .3rem; }
+.dl-tours-details[open] > summary { margin-bottom: .3rem; }
+.dl-tours-head { display: flex; align-items: center; gap: .8rem; font-weight: 600; font-size: .9rem; cursor: pointer; list-style: none; padding: .45rem .8rem; border-radius: 8px; border: 1px dashed var(--border, #444); }
+.dl-tours-head::-webkit-details-marker { display: none; }
+.dl-tours-head::before { content: "▸"; opacity: .6; }
+.dl-tours-details[open] > .dl-tours-head::before { content: "▾"; }
+.dl-tour-row { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; padding: .45rem .8rem; border-radius: 8px; background: var(--surface, #1f1f1f); border: 1px solid var(--border, #444); font-size: .85rem; }
+.dl-tour-main { flex: 1 1 14rem; min-width: 0; }
+.dl-tour-stub { font-size: .75rem; color: #c8922a; border: 1px solid #c8922a; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }

@@ -316,6 +316,10 @@ def scan(
                 "lat"          : photo["gps"][0] if photo["gps"] else None,
                 "lon"          : photo["gps"][1] if photo["gps"] else None,
                 "time"         : photo["dt"].strftime("%H:%M") if photo.get("dt") else None,
+                # Additiv 26.09.2026: aus welchem Bestand — bei Scope both
+                # liegen Familien- und eigene Fotos in einem Jahresblock,
+                # die App muss das Album im richtigen Space oeffnen.
+                "space"        : url_space,
             })
 
         years_ago = current_year - year
@@ -331,6 +335,36 @@ def scan(
     output.sort(key=lambda x: x["years_ago"], reverse=True)
 
     log.info("Scanner: %d year blocks found", len(output))
+    return output
+
+
+def merge_year_blocks(*scans: list) -> list:
+    """Scope both (26.09.2026): Jahresbloecke mehrerer Scans zusammenlegen.
+
+    Je Jahr werden die Fotos REIHUM genommen — erst Platz 1 jedes Scans,
+    dann Platz 2 usw. Die Rangfolge (rank_photos) gilt je Bestand; wer mit
+    ?limit= abschneidet, bekommt so aus beiden etwas und nicht nur die
+    Familienalben, die zufaellig zuerst gescannt wurden. `total` addiert.
+    Ein einzelner Scan kommt unveraendert zurueck."""
+    scans = [s for s in scans if s]
+    if len(scans) <= 1:
+        return scans[0] if scans else []
+    by_year: dict = {}
+    for scan_result in scans:
+        for block in scan_result:
+            by_year.setdefault(block["year"], []).append(block)
+    output = []
+    for year, blocks in by_year.items():
+        photos = []
+        for i in range(max(len(b["photos"]) for b in blocks)):
+            photos.extend(b["photos"][i] for b in blocks if i < len(b["photos"]))
+        output.append({
+            "year"     : year,
+            "years_ago": blocks[0]["years_ago"],
+            "photos"   : photos,
+            "total"    : sum(b.get("total", len(b["photos"])) for b in blocks),
+        })
+    output.sort(key=lambda x: x["years_ago"], reverse=True)
     return output
 
 

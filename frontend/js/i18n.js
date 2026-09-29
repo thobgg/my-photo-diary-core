@@ -733,9 +733,11 @@
         tour_browser_show_all: 'Alle Touren zeigen',
         tour_browser_none_in_range: '— Keine Touren in diesem Zeitraum —',
         tour_no_range: 'Kein Fotozeitraum erkennbar',
-        tour_in_album: 'im Album',
+        tour_in_album: 'schon eingefügt',
+        tour_in_folder: 'im Album-Ordner',
+        tour_stub: 'Stummel',
         tour_folder_section: 'Im Album-Ordner',
-        tour_copying: 'Kopiere …',
+        tour_copying: 'Füge ein …',
         tour_copy_error: 'Fehler',
         separator_title: 'Trenner einfügen',
         link_title: 'Web-Link einfügen',
@@ -795,7 +797,15 @@
         delete_failed: ', {failed} fehlgeschlagen',
         folder_badge: 'in {album}',
         unscanned_row: 'Ordner „{folder}“ ohne Album — {count} Dateien',
-        unscanned_action: 'Album anlegen'
+        unscanned_action: 'Album anlegen',
+        tours_title: 'Touren ohne Album ({n})',
+        tours_all: 'Alle Touren',
+        tours_stub: 'Stummel',
+        tours_recycle: 'Papierkorb',
+        tours_recycle_title: 'Tour in den Papierkorb?',
+        tours_recycled: 'Im Papierkorb',
+        tours_deleted: 'Gelöscht (kein Papierkorb)',
+        tours_placed: 'Tour in „{album}“ eingefügt'
       }
     },
     en: {
@@ -1517,9 +1527,11 @@
         tour_browser_show_all: 'Show all tours',
         tour_browser_none_in_range: '— No tours in this period —',
         tour_no_range: 'No photo period detected',
-        tour_in_album: 'in album',
+        tour_in_album: 'already inserted',
+        tour_in_folder: 'in album folder',
+        tour_stub: 'Stub',
         tour_folder_section: 'In album folder',
-        tour_copying: 'Copying …',
+        tour_copying: 'Inserting …',
         tour_copy_error: 'Error',
         separator_title: 'Insert separator',
         link_title: 'Insert web link',
@@ -1579,7 +1591,15 @@
         delete_failed: ', {failed} failed',
         folder_badge: 'in {album}',
         unscanned_row: 'Folder “{folder}” without album — {count} files',
-        unscanned_action: 'Create album'
+        unscanned_action: 'Create album',
+        tours_title: 'Tours without album ({n})',
+        tours_all: 'All tours',
+        tours_stub: 'Stub',
+        tours_recycle: 'Recycle bin',
+        tours_recycle_title: 'Move tour to recycle bin?',
+        tours_recycled: 'In recycle bin',
+        tours_deleted: 'Deleted (no recycle bin)',
+        tours_placed: 'Tour inserted into “{album}”'
       }
     }
   };

@@ -97,7 +97,8 @@ def _store_notification(results, today, recipients) -> None:
 async def _run_daily_job(photo_base):
     """Daily job — produziert je nach memories_scope des Nutzers
     (users.json, 03.09.2026): EIN Shared-Scan für alle mit Scope shared,
-    dazu je ein Personal-Scan für Nutzer mit Scope personal."""
+    dazu je ein Personal-Scan für Nutzer mit Scope personal oder both
+    (both: mit dem Shared-Ergebnis zusammengelegt, seit 26.09.2026)."""
     from core import settings as _settings
     from core.userdb import list_users, lookup
     from diary_memories.scanner import scan
@@ -110,12 +111,17 @@ async def _run_daily_job(photo_base):
         return
 
     try:
-        shared_rcpt, personal_users = [], []
+        from diary_memories.scanner import merge_year_blocks
+
+        shared_rcpt, own_users = [], []
         for user in list_users():
             rec = lookup(user)
-            if rec and rec.memories_scope == "personal":
-                personal_users.append(rec)
-            else:
+            scope = rec.memories_scope if rec else "both"
+            # both ohne eigenen Ordner = nur Familienalben, wie shared
+            if (rec and scope in ("personal", "both")
+                    and rec.personal_path.is_dir()):
+                own_users.append((rec, scope))
+            elif scope != "personal":
                 shared_rcpt.append(user)
 
         results = scan(
@@ -128,19 +134,21 @@ async def _run_daily_job(photo_base):
         elif not results:
             log.info("No shared memories for today")
 
-        for rec in personal_users:
-            if not rec.personal_path.is_dir():
-                continue
+        # personal: nur der eigene Bestand; both (Vorgabe seit 26.09.2026):
+        # eigener Bestand und Familienalben in einer Meldung.
+        for rec, scope in own_users:
             r = scan(
                 photo_base   = rec.personal_path,
                 target_date  = today,
                 current_year = today.year,
                 url_space    = "personal",
             )
+            if scope == "both":
+                r = merge_year_blocks(results, r)
             if r:
                 _store_notification(r, today, [rec.username])
             else:
-                log.info("No personal memories for %s", rec.username)
+                log.info("No memories for %s (%s)", rec.username, scope)
 
     except Exception as e:
         log.error("DiaryMemories job error: %s", e, exc_info=True)

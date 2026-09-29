@@ -87,7 +87,7 @@ def _settings_response(is_admin: bool) -> dict:
 # ---------------------------------------------------------------------------
 
 _ME_FIELDS = {"memories_scope"}
-_ME_SCOPES = {"shared", "personal"}
+_ME_SCOPES = {"shared", "personal", "both"}
 
 
 @router.get("/api/settings/me")
@@ -95,7 +95,7 @@ async def get_my_settings(request: Request):
     session = require_session(request)
     from core.userdb import lookup
     rec = lookup(session.user)
-    return {"memories_scope": rec.memories_scope if rec else "shared"}
+    return {"memories_scope": rec.memories_scope if rec else "both"}
 
 
 @router.put("/api/settings/me")

@@ -26,15 +26,18 @@ def test_memories_web_page_removed(client, login):
 
 def test_settings_me_roundtrip(client, login):
     login()
-    assert client.get("/api/settings/me").json() == {"memories_scope": "shared"}
+    # Vorgabe seit 26.09.2026: both (vorher shared)
+    assert client.get("/api/settings/me").json() == {"memories_scope": "both"}
     r = client.put("/api/settings/me", json={"memories_scope": "personal"})
     assert r.status_code == 200
     assert client.get("/api/settings/me").json() == {"memories_scope": "personal"}
     # ungültiger Wert / fremdes Feld → 400
     assert client.put("/api/settings/me", json={"memories_scope": "alles"}).status_code == 400
     assert client.put("/api/settings/me", json={"role": "admin"}).status_code == 400
-    # zurück auf Default (Test-Hygiene: users.json ist session-scoped)
     assert client.put("/api/settings/me", json={"memories_scope": "shared"}).status_code == 200
+    assert client.get("/api/settings/me").json() == {"memories_scope": "shared"}
+    # zurück auf Default (Test-Hygiene: users.json ist session-scoped)
+    assert client.put("/api/settings/me", json={"memories_scope": "both"}).status_code == 200
 
 
 def test_memories_personal_scope(client, login, personal_album):
@@ -62,6 +65,11 @@ def test_memories_personal_scope(client, login, personal_album):
     assert client.put("/api/settings/me",
                       json={"memories_scope": "personal"}).status_code == 200
     try:
+        # Seit der Vorgabe both (26.09.2026) scannt schon ein frueherer
+        # Test den Personal-Space mit — ohne Leeren kaeme dessen leerer
+        # Cache-Eintrag zurueck, bevor das Testfoto existierte.
+        from routers import memories as _m
+        _m._MEMORIES_CACHE.clear()
         r = client.get("/api/memories")
         assert r.status_code == 200
         body = r.json()
@@ -73,7 +81,7 @@ def test_memories_personal_scope(client, login, personal_album):
         assert r.status_code == 200
         assert r.headers["content-type"] == "image/jpeg"
     finally:
-        client.put("/api/settings/me", json={"memories_scope": "shared"})
+        client.put("/api/settings/me", json={"memories_scope": "both"})
 
 
 def test_memories_stale_serve_and_prewarm(client, login, personal_album):
@@ -166,4 +174,82 @@ def test_memories_limit_und_total(client, login, personal_album):
         assert cut["total"] == full["total"]
         assert [p["filename"] for p in block6["photos"]] == [p["filename"] for p in block["photos"][:6]]
     finally:
+        client.put("/api/settings/me", json={"memories_scope": "both"})
+
+
+def test_memories_both_scope(client, login, personal_album):
+    """Scope both (26.09.2026): Familien- und eigene Fotos in einem
+    Jahresblock, jedes Foto sagt per `space`, woher es kommt."""
+    import shutil
+    from datetime import date as _d
+    from urllib.parse import quote
+    import config
+    from routers import memories as _m
+    from tests.conftest import ADMIN, make_jpeg
+
+    today = _d.today()
+    y = today.year - 3
+    fn_p = f"{y:04d}-{today.month:02d}-{today.day:02d}_11-00-00.jpg"
+    fn_s = f"{y:04d}-{today.month:02d}-{today.day:02d}_16-00-00.jpg"
+
+    base = config.PHOTO_PATH_SHARED.parent / f"personal-{ADMIN[0]}" / personal_album
+    make_jpeg(base / fn_p)
+    login()
+    url = f"/api/album/personal/{quote(personal_album)}"
+    meta = client.get(url).json()["meta"]
+    r = client.post(f"{url}/update", json={
+        "version": "1.4", "meta": meta,
+        "elements": [{"id": "0001", "type": "photo", "file": fn_p}],
+    })
+    assert r.status_code == 200, r.text
+
+    shared_dir = config.PHOTO_PATH_SHARED / "Scope-both-Test"
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    make_jpeg(shared_dir / fn_s)
+    (shared_dir / "album.json").write_text(
+        '{"version": "1.4", "meta": {}, "elements": '
+        f'[{{"id": "0001", "type": "photo", "file": "{fn_s}"}}]}}',
+        encoding="utf-8")
+
+    try:
+        assert client.put("/api/settings/me",
+                          json={"memories_scope": "both"}).status_code == 200
+        _m._MEMORIES_CACHE.clear()
+        body = client.get("/api/memories").json()
+        block = next(b for b in body["years"] if b["year"] == y)
+        by_file = {p["filename"]: p for p in block["photos"]}
+        assert by_file[fn_p]["space"] == "personal"
+        assert "space=personal" in by_file[fn_p]["thumbnail_url"]
+        assert by_file[fn_s]["space"] == "shared"
+        assert "space=" not in by_file[fn_s]["thumbnail_url"]
+        assert block["total"] == len(block["photos"]) == 2
+
+        # shared allein: das eigene Foto faellt heraus
         client.put("/api/settings/me", json={"memories_scope": "shared"})
+        block = next(b for b in client.get("/api/memories").json()["years"] if b["year"] == y)
+        assert {p["space"] for p in block["photos"]} == {"shared"}
+    finally:
+        client.put("/api/settings/me", json={"memories_scope": "both"})
+        shutil.rmtree(shared_dir, ignore_errors=True)
+        _m._MEMORIES_CACHE.clear()
+
+
+def test_merge_year_blocks_reihum():
+    """Je Jahr reihum aus beiden Bestaenden, total addiert, aelteste zuerst."""
+    from diary_memories.scanner import merge_year_blocks
+
+    def blk(year, names, total=None):
+        return {"year": year, "years_ago": 2026 - year,
+                "photos": [{"filename": n} for n in names],
+                "total": total if total is not None else len(names)}
+
+    a = [blk(2020, ["a1", "a2", "a3"], total=9)]
+    b = [blk(2018, ["x1"]), blk(2020, ["b1"])]
+    out = merge_year_blocks(a, b)
+    assert [o["year"] for o in out] == [2018, 2020]
+    y2020 = out[1]
+    assert [p["filename"] for p in y2020["photos"]] == ["a1", "b1", "a2", "a3"]
+    assert y2020["total"] == 10
+    # Einzelner oder leerer Scan: unveraendert
+    assert merge_year_blocks(a, []) is a
+    assert merge_year_blocks([], []) == []

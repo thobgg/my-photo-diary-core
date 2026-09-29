@@ -454,6 +454,7 @@ function addTourToAlbum(file) {
     }
     const newId = generateId();
     const newElem = { id: newId, type: 'tour', file: file.file };
+    if (file.source_album)                  newElem.source_album   = file.source_album;
     if (file.title)                         newElem.title          = file.title;
     if (file.show_elevation === false)      newElem.show_elevation = false;  // default true
     if (file.map_layer && file.map_layer !== 'osm') newElem.map_layer = file.map_layer;

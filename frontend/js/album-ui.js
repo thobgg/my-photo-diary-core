@@ -666,9 +666,10 @@ function closeAddAudioModal() {
 // Tour (placeholder)
 // ============================================
 
-// MPD Tours browser inside album edit: lists all global tours (GET /api/tours),
-// pre-filtered to the album's photo date range, one click copies the GPX into
-// the album folder (if needed) and inserts the tour element.
+// MPD Tours browser inside album edit: lists all tours of the shared library
+// (GET /api/tours, wherever they lie), pre-filtered to the album's photo date
+// range, with their state. One click places the GPX (move or source_album)
+// and inserts the tour element.
 async function openAddTourModal() {
     closeFabMenu();
     const existing = document.getElementById('add-tour-modal');
@@ -745,9 +746,11 @@ async function openAddTourModal() {
             ? allTours.filter(t => t.date && t.date >= range.min && t.date <= range.max)
             : allTours.slice();
 
-        // GPX physically in the album folder but not in the global tours list.
-        const toursNames = new Set(allTours.map(t => t.filename));
-        const folderOnly = [...folderSet].filter(f => !toursNames.has(f)).sort().reverse();
+        // GPX physically in the album folder but not in the tour list —
+        // personal albums (the tour list covers the shared library only).
+        const listed = new Set(albumSpace === 'shared'
+            ? allTours.filter(t => t.folder === albumName).map(t => t.filename) : []);
+        const folderOnly = [...folderSet].filter(f => !listed.has(f)).sort().reverse();
 
         if (!shown.length && !folderOnly.length) {
             const empty = document.createElement('div');
@@ -759,7 +762,7 @@ async function openAddTourModal() {
             return;
         }
 
-        shown.forEach(t => list.appendChild(_tourBrowserRow(t, folderSet.has(t.filename), folderSet)));
+        shown.forEach(t => list.appendChild(_tourBrowserRow(t)));
 
         if (folderOnly.length) {
             const sec = document.createElement('div');
@@ -767,56 +770,78 @@ async function openAddTourModal() {
             sec.textContent = _t('add_modal.tour_folder_section', 'Im Album-Ordner');
             list.appendChild(sec);
             folderOnly.forEach(f => list.appendChild(
-                _tourBrowserRow({ filename: f, date: '', label: '' }, true, folderSet)));
+                _tourBrowserRow({ filename: f, folder: albumName, date: '', label: '', used_in: [], _local: true })));
         }
     }
 
     renderBrowser();
 }
 
-// Build one clickable tour row. `folderSet` is passed so the click handler can
-// decide whether a copy is still needed.
-function _tourBrowserRow(t, inAlbum, folderSet) {
+// One clickable tour row with its state (docs/specs/TOURS.md): already in
+// THIS album, in other albums, lying in this album's folder, stub.
+function _tourBrowserRow(t) {
     const _t = (k, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k) : fb) || fb;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const row = document.createElement('div');
     row.className = 'tour-browser-row';
 
     const meta = [];
-    if (t.dist)     meta.push(`<span class="tbr-dist">📍 ${t.dist} km</span>`);
-    if (t.duration) meta.push(`<span>⏱ ${t.duration}</span>`);
-    if (t.hr_avg)   meta.push(`<span>♥ Ø${t.hr_avg}</span>`);
+    if (t.dist)     meta.push(`<span class="tbr-dist">📍 ${esc(t.dist)} km</span>`);
+    if (t.duration) meta.push(`<span>⏱ ${esc(t.duration)}</span>`);
+    if (t.hr_avg)   meta.push(`<span>♥ Ø${esc(t.hr_avg)}</span>`);
+
+    // used_in und folder beziehen sich auf den Familienbestand — in einem
+    // persoenlichen Album bedeutet ein gleichnamiger Ordner nichts.
+    const shared = albumSpace === 'shared';
+    const inFolder = t._local || (shared && t.folder === albumName);
+    const used = t.used_in || [];
+    const here = shared && used.some(u => u.album === albumName);
+    const others = shared ? used.filter(u => u.album !== albumName) : used;
+    const badges = [];
+    if (here) {
+        badges.push(`<span class="tbr-badge">${esc(_t('add_modal.tour_in_album', 'schon eingefügt'))}</span>`);
+    } else if (inFolder) {
+        badges.push(`<span class="tbr-badge">${esc(_t('add_modal.tour_in_folder', 'im Album-Ordner'))}</span>`);
+    }
+    others.forEach(u => badges.push(`<span class="tbr-badge tbr-other" title="${esc(u.album)}">in: ${esc(u.title || u.album)}</span>`));
+    if (t.stub) badges.push(`<span class="tbr-badge tbr-stub">${esc(_t('add_modal.tour_stub', 'Stummel'))}</span>`);
 
     row.innerHTML = `
         <div class="tbr-main">
-            <div class="tbr-date">${t.date ? _fmtIsoDate(t.date) : t.filename}</div>
-            <div class="tbr-sport">${t.label || ''}</div>
+            <div class="tbr-date">${esc(t.date ? _fmtIsoDate(t.date) : t.filename)}</div>
+            <div class="tbr-sport">${esc(t.title || t.label || '')}</div>
             <div class="tbr-meta">${meta.join('')}</div>
         </div>
-        ${inAlbum ? `<span class="tbr-badge">${_t('add_modal.tour_in_album', 'im Album')}</span>` : ''}`;
+        <div class="tbr-badges">${badges.join('')}</div>`;
+    if (here) row.classList.add('tbr-done');
 
-    row.addEventListener('click', () => selectTourFromBrowser(t.filename, folderSet));
+    row.addEventListener('click', () => selectTourFromBrowser(t, inFolder));
     return row;
 }
 
-// Copy the GPX into the album folder (unless it is already there) and insert the
-// tour element with defaults. 409 from /copy means the file already exists → OK.
-async function selectTourFromBrowser(filename, folderSet) {
+// Put the GPX into the album (POST /api/tours/place: moves an open tour,
+// references one that already lives in another album via source_album),
+// then insert the tour element. A GPX already in this folder needs no call.
+async function selectTourFromBrowser(t, inFolder) {
     const _t = (k, fb) => (window.MPD_I18N ? window.MPD_I18N.t(k) : fb) || fb;
     const status = document.getElementById('tour-browser-status');
     try {
-        if (!folderSet || !folderSet.has(filename)) {
-            if (status) { status.style.color = ''; status.textContent = _t('add_modal.tour_copying', 'Kopiere …'); }
-            const res = await fetch(`${API_BASE}/api/tours/copy`, {
+        let elem = { file: t.filename };
+        if (!inFolder) {
+            if (status) { status.style.color = ''; status.textContent = _t('add_modal.tour_copying', 'Füge ein …'); }
+            const res = await fetch(`${API_BASE}/api/tours/place`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ filename, album: albumName, space: albumSpace }),
+                body:    JSON.stringify({ folder: t.folder, filename: t.filename,
+                                          album: albumName, space: albumSpace }),
             });
-            if (!res.ok && res.status !== 409) {
-                const d = await res.json().catch(() => ({}));
-                throw new Error(d.detail || res.status);
-            }
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(d.detail || res.status);
+            elem = { file: d.file };
+            if (d.source_album) elem.source_album = d.source_album;
         }
-        addTourToAlbum({ file: filename });
+        addTourToAlbum(elem);
         closeAddTourModal();
     } catch (e) {
         if (status) {

@@ -67,8 +67,10 @@ class UserRecord:
     # Freigeschaltete Zusatzmodule. None = Feld fehlt in users.json = alle frei
     # (Grandfather). Leere Menge = nur Grundsoftware.
     modules: Optional[FrozenSet[str]] = None
-    # Memories-Quelle je Nutzer (03.09.2026): shared (Default) | personal
-    memories_scope: str = "shared"
+    # Memories-Quelle je Nutzer (03.09.2026): shared | personal | both.
+    # Vorgabe seit 26.09.2026 both — wer nie hinsieht, bekommt alle seine
+    # Erinnerungen — entscheidend ist, was dasteht, wenn niemand hinsieht.
+    memories_scope: str = "both"
     # Erstanmelde-Zwangswechsel (04.09.2026): true = nur noch
     # Passwort-Änderung erlaubt, bis ein neues Passwort gesetzt ist.
     must_change_password: bool = False
@@ -79,9 +81,12 @@ class UserRecord:
     may_share: bool = True
 
 
+MEMORIES_SCOPES = ("shared", "personal", "both")
+
+
 def _parse_scope(entry: dict) -> str:
     scope = entry.get("memories_scope")
-    return scope if scope in ("shared", "personal") else "shared"
+    return scope if scope in MEMORIES_SCOPES else "both"
 
 
 def _parse_modules(entry: dict) -> Optional[FrozenSet[str]]:

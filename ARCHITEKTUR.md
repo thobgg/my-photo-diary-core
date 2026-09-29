@@ -261,6 +261,8 @@ main.py            App, 2 Middlewares, Login/Logout, Lifespan
   │    license.py / rsa_min.py                   Modul-Lizenz, nur bei ENFORCE=1
   │    ratelimit.py                              Querschnitt
   │    trails_*.py / geo_place.py / gpx_meta.py  (Plus: Trails, Tours)
+  │    tours_index.py / tours_migrate.py         (Plus: Touren überall im Bestand,
+  │                                               Umzug aus tours/ — docs/specs/TOURS.md)
   │
   └─ diary_memories/   Memories: Tagesmeldung „heute vor X Jahren“ (Kern)
 ```
@@ -566,7 +568,13 @@ alle drei müssen zustimmen:
 
 Tours ist **soft-gated**: `routers/media.py` hat bewusst **keinen einzigen**
 `require_module`-Guard, deshalb liefert `/api/gpx/…` eingebettete
-Tour-Elemente weiter aus. Gesperrt sind nur `/tours` selbst und das Kopieren.
+Tour-Elemente weiter aus. Gesperrt sind nur `/tours` selbst sowie
+Einfügen, Löschen und Umzug über `/api/tours/…`.
+
+Seit 29.09.2026 liegen Touren nicht mehr in `shared/tours/`, sondern offen
+im Durchlauf-Ordner des Jahres und eingefügt im Albumordner
+(`docs/specs/TOURS.md`). Eine zweite Verwendung zeigt per `source_album`
+auf die Datei, statt sie zu kopieren.
 
 ---
 

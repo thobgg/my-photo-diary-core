@@ -2467,6 +2467,14 @@ body.edit-mode-active .edit-toggle .edit-icon-check  { display: block; }
     padding: 2px 8px;
     white-space: nowrap;
 }
+.tbr-badges {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    flex-shrink: 0; max-width: 45%;
+}
+.tbr-badges .tbr-badge { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.tbr-badge.tbr-other { color: #43c98c; border-color: #43c98c; }
+.tbr-badge.tbr-stub  { color: #c8922a; border-color: #c8922a; }
+.tour-browser-row.tbr-done { opacity: .6; }
 .tour-browser-section {
     font-size: 0.72rem;
     text-transform: uppercase;

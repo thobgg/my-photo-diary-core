@@ -999,7 +999,7 @@ MPD_LICENSE_ENFORCE=0                 # 1 = Plus modules need a license file</co
     <li><strong>Kern, nicht Plus</strong> (seit 20.09.2026): „heute vor X Jahren" ist das, was ein Tagebuch von einer Galerie unterscheidet.</li>
     <li><strong>Täglich 06:30</strong> (<code>MEMORIES_HOUR</code>): Der Job sucht Fotos mit passendem Tag und Monat über alle Jahre und schreibt eine Zeile in den Benachrichtigungs-Store; die App holt sie ab. Schalter <code>memories_push_enabled</code> in den Einstellungen.</li>
     <li><strong>Die Auswahl je Jahr</strong> (<code>rank_photos</code>): Tagesabschnitte reihum, verschiedene Orte zuerst, Fotos ohne Uhrzeit zuletzt. Der Stichentscheid ist ein Würfel mit dem angezeigten Datum als Startwert — innerhalb eines Tages stabil, von Jahr zu Jahr verschieden.</li>
-    <li><strong>Quelle je Konto:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code> (Vorgabe) oder <code>personal</code>.</li>
+    <li><strong>Quelle je Konto:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code>, <code>personal</code> oder <code>both</code> (Vorgabe seit 26.09.2026, auch wenn das Feld fehlt). Bei <code>both</code> legt <code>merge_year_blocks</code> beide Scans je Jahr reihum zusammen; jedes Foto trägt <code>space</code>.</li>
     <li>Der Tagesscan liegt 30 Minuten im Cache und wird beim Start und beim Tageswechsel vorgewärmt.</li>
   </ul>
 </div>
@@ -1009,7 +1009,7 @@ MPD_LICENSE_ENFORCE=0                 # 1 = Plus modules need a license file</co
     <li><strong>Core, not Plus</strong> (since 2026-09-20): "today, years ago" is what separates a diary from a gallery.</li>
     <li><strong>Daily at 06:30</strong> (<code>MEMORIES_HOUR</code>): the job finds photos matching day and month across all years and writes one row into the notification store; the app fetches it. Switch <code>memories_push_enabled</code> in the settings.</li>
     <li><strong>The per-year selection</strong> (<code>rank_photos</code>): time-of-day buckets in turn, new places first, photos without a time last. Ties are broken by a dice seeded with the displayed date — stable within a day, different from year to year.</li>
-    <li><strong>Source per account:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code> (default) or <code>personal</code>.</li>
+    <li><strong>Source per account:</strong> <code>memories_scope</code> in <code>users.json</code> — <code>shared</code>, <code>personal</code> or <code>both</code> (default since 2026-09-26, also when the field is missing). With <code>both</code>, <code>merge_year_blocks</code> interleaves both scans per year; every photo carries <code>space</code>.</li>
     <li>The daily scan is cached for 30 minutes and pre-warmed at start and at the change of day.</li>
   </ul>
 </div>
@@ -1068,7 +1068,7 @@ MPD_LICENSE_ENFORCE=0                 # 1 = Plus modules need a license file</co
       "is_demo": false,
       "display_name": "Anna",            // optional
       "modules": ["stats", "tours"],      // optional; missing = all
-      "memories_scope": "shared",         // shared | personal
+      "memories_scope": "both",           // shared | personal | both (Vorgabe)
       "must_change_password": false,
       "may_share": true
     }

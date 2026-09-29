@@ -216,6 +216,8 @@ LOCALES: dict = {
             "invalid_path": "Ungültiger Pfad.",
             "album_folder_not_found": "Album-Ordner '{album}' nicht gefunden.",
             "already_in_album": "'{filename}' existiert bereits in '{album}'.",
+            "in_use": "Die Tour wird noch verwendet in: {albums}.",
+            "store_readonly": "Der Bestand ist nur lesbar eingehängt — der Umzug geht nur auf der NAS.",
             "demo_unavailable": "Demo: Tours nicht verfügbar.",
         },
         "trails": {
@@ -468,6 +470,8 @@ LOCALES: dict = {
             "invalid_path": "Invalid path.",
             "album_folder_not_found": "Album folder '{album}' not found.",
             "already_in_album": "'{filename}' already exists in '{album}'.",
+            "in_use": "The tour is still used in: {albums}.",
+            "store_readonly": "The library is mounted read-only — the move only works on the NAS.",
             "demo_unavailable": "Demo: tours not available.",
         },
         "trails": {

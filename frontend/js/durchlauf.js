@@ -87,6 +87,7 @@ function dlSetSpace(space) {
     dlUpdateBar();
     dlFetchRecycle();
     dlUnscanned();
+    dlTours();
     dlLoadMore();
 }
 
@@ -112,6 +113,107 @@ async function dlUnscanned() {
         }
         box.hidden = false;
     } catch (_) {}
+}
+
+// Offene Touren im Durchlauf (docs/specs/TOURS.md §4.4): GPX in einem
+// Jahresordner, die noch kein Album benutzt. Die Foto-Zeitachse kennt keine
+// GPX, darum ein eigener Abschnitt. Tours ist ein Plus-Modul — fehlt es,
+// antwortet /api/tours mit 403/404, und der Abschnitt bleibt unsichtbar.
+// Nur Familienbestand (dort liegen die Touren), nur mit Kuratorrecht.
+async function dlTours() {
+    const box = document.getElementById('dl-tours');
+    box.innerHTML = ''; box.hidden = true;
+    if (DL.space !== 'shared' || !(DL.rights.shared || []).includes('curate')) return;
+    let tours = [];
+    try {
+        const r = await fetch('/api/tours');
+        if (!r.ok) return;
+        tours = ((await r.json()).tours || []).filter(t => t.kind === 'durchlauf' && !t.used_in.length);
+    } catch (_) { return; }
+    if (!tours.length) return;
+
+    // Zugeklappt: Nach dem Umzug aus tours/ (29.09.2026) sind das Hunderte
+    // Zeilen — offen stuenden sie vor allen Fotos des Durchlaufs.
+    const det = document.createElement('details'); det.className = 'dl-tours-details';
+    const head = document.createElement('summary'); head.className = 'dl-tours-head';
+    const h = document.createElement('span');
+    h.textContent = _dt('durchlauf.tours_title', { n: tours.length }, `Touren ohne Album (${tours.length})`);
+    const a = document.createElement('a'); a.href = '/tours'; a.className = 'dl-unscanned-link';
+    a.textContent = _dt('durchlauf.tours_all', null, 'Alle Touren');
+    head.append(h, a);
+    det.appendChild(head);
+    box.appendChild(det);
+    try { det.open = localStorage.getItem('mpd-durchlauf-tours-open') === '1'; } catch (_) {}
+    det.addEventListener('toggle', () => {
+        try { localStorage.setItem('mpd-durchlauf-tours-open', det.open ? '1' : '0'); } catch (_) {}
+    });
+
+    const stubText = { unlesbar: 'unlesbar', punkte: 'kaum Punkte', strecke: 'unter 0,5 km', dauer: 'unter 5 Min.' };
+    for (const t of tours) {
+        const row = document.createElement('div'); row.className = 'dl-tour-row';
+        const main = document.createElement('span'); main.className = 'dl-tour-main';
+        const bits = [dlFormatDay(t.date) || t.filename];
+        if (t.title || t.label) bits.push(t.title || t.label);
+        if (t.dist) bits.push(`${t.dist} km`);
+        if (t.duration) bits.push(t.duration);
+        main.textContent = bits.join(' · ');
+        row.appendChild(main);
+        if (t.stub) {
+            const st = document.createElement('span'); st.className = 'dl-tour-stub';
+            st.textContent = `${_dt('durchlauf.tours_stub', null, 'Stummel')} · ${stubText[t.stub] || t.stub}`;
+            row.appendChild(st);
+        }
+        const put = document.createElement('button'); put.type = 'button'; put.className = 'dl-bar-btn';
+        put.textContent = _dt('durchlauf.btn_import', null, 'Einsortieren nach…');
+        put.onclick = () => dlTourPlace(t);
+        const del = document.createElement('button'); del.type = 'button'; del.className = 'dl-bar-btn dl-bar-btn--danger';
+        del.textContent = _dt('durchlauf.tours_recycle', null, 'Papierkorb');
+        del.onclick = () => dlTourRecycle(t);
+        row.append(put, del);
+        det.appendChild(row);
+    }
+    box.hidden = false;
+}
+
+const _tourUrl = t => `/api/tours/file/${encodeURIComponent(t.folder)}/${encodeURIComponent(t.filename)}`;
+
+async function dlTourPlace(t) {
+    const album = await dlPickAlbum();
+    if (!album) return;
+    try {
+        const r = await fetch('/api/tours/place', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: t.folder, filename: t.filename, album, space: 'shared', append: true }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(typeof d.detail === 'string' ? d.detail : `HTTP ${r.status}`);
+        dlRememberAlbum(album);
+        window.mpdToast(_dt('durchlauf.tours_placed', { album }, `Tour in „${album}“ eingefügt`));
+        dlTours();
+    } catch (e) {
+        window.mpdAlert({ icon: '⚠️', title: _dt('album.delete_failed_title', null, 'Fehler'), body: e.message });
+    }
+}
+
+async function dlTourRecycle(t) {
+    const ok = await window.mpdConfirm({
+        icon: '🗑', destructive: true,
+        title: _dt('durchlauf.tours_recycle_title', null, 'Tour in den Papierkorb?'),
+        body : [dlFormatDay(t.date), t.dist ? `${t.dist} km` : '', t.duration || ''].filter(Boolean).join(' · '),
+        confirmLabel: _dt('durchlauf.tours_recycle', null, 'Papierkorb'),
+    });
+    if (!ok) return;
+    try {
+        const r = await fetch(_tourUrl(t), { method: 'DELETE' });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(typeof d.detail === 'string' ? d.detail : `HTTP ${r.status}`);
+        window.mpdToast(d.recycled
+            ? _dt('durchlauf.tours_recycled', null, 'Im Papierkorb')
+            : _dt('durchlauf.tours_deleted', null, 'Gelöscht (kein Papierkorb)'));
+        dlTours();
+    } catch (e) {
+        window.mpdAlert({ icon: '⚠️', title: _dt('album.delete_failed_title', null, 'Fehler'), body: e.message });
+    }
 }
 
 async function dlFetchRecycle() {
